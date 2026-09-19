@@ -1,0 +1,31 @@
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+
+# Keystores, Signing Keys, and Certificates
+*.keystore
+*.jks
+keystore.properties
+*.p8
+*.pem
+*.key
+*.pk8
+
+# Service Account and Cloud Credentials
+*-service-account.json
+service-account*.json
+firebase-admin*.json
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node & Build Artifacts
+node_modules/
+dist/
+build/
+.gradle/
+.system_generated/
+scratch/
