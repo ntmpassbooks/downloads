@@ -1,5 +1,6 @@
 // NTM Passbook Downloads Service Worker
-const CACHE_NAME = 'ntm-downloads-v1';
+// Version: 1.0.1 (Build 20260919.1)
+const CACHE_NAME = 'ntm-passbook-site-v1.0.1';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -11,6 +12,7 @@ const STATIC_ASSETS = [
   './assets/iphone_pwa_mockup.jpg'
 ];
 
+// 1. Install: Pre-cache core shell & assets, then immediately skip waiting
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -18,6 +20,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// 2. Activate: Clear obsolete caches from prior versions, then claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -29,18 +32,68 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 3. Message: Enable manual skipWaiting trigger from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// 4. Fetch: Safe update-aware routing strategy
 self.addEventListener('fetch', (event) => {
+  // Financial Safety: Only intercept GET requests
   if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
+
+  // Financial Safety & Backend Authoritativeness:
+  // Never intercept or cache API endpoints, auth endpoints, or financial transactions
   if (url.pathname.includes('/api/') || url.pathname.includes('/auth/')) return;
 
+  // Binary Package Safety: Never cache APK binaries in Service Worker cache
+  if (url.pathname.endsWith('.apk')) return;
+
+  // Live Update Manifest: Never cache version.json to ensure live update detection
+  if (url.pathname.endsWith('version.json')) return;
+
+  // Navigation requests (index.html / root):
+  // Network-First with cache fallback to ensure users receive latest HTML on deployment
+  if (
+    event.request.mode === 'navigate' ||
+    url.pathname.endsWith('/index.html') ||
+    url.pathname === url.origin + '/' ||
+    url.pathname.endsWith('/downloads/')
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => cached || caches.match('./index.html'));
+        })
+    );
+    return;
+  }
+
+  // Static Assets: Stale-While-Revalidate for instant loading + background refresh
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
