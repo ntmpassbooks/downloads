@@ -29,3 +29,15 @@ build/
 .gradle/
 .system_generated/
 scratch/
+*.tsbuildinfo
+
+# SQLite Database Files & Data
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs
+logs/
+*.log

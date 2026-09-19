@@ -1,0 +1,27 @@
+{
+  "name": "NTM Passbook",
+  "short_name": "NTM Passbook",
+  "description": "एनटीएम पासबुक — मंडळाचे डिजिटल पासबुक (NTM Passbook)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "icons": [
+    {
+      "src": "/NTM_Passbook_Logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/NTM_Passbook_Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/NTM_Passbook_Logo.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

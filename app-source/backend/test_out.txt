@@ -1,0 +1,542 @@
+(node:8620) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+🔄 Running database migrations...
+✅ Migrations applied successfully.
+🌱 Seeding organization and initial roles...
+✅ Database seeded successfully:
+   - Organization: नवतरुण मित्र मंडळ (Code: NTM01)
+   - 1. अध्यक्ष (President): Phone: 9876543210, PIN: 1234
+   - 2. खजिनदार (Treasurer): Phone: 9876543211, PIN: 1234
+   - 3. सदस्य (Member):    Phone: 9876543212, PIN: 1234
+Unhandled Server Error: Error: 9 values for 10 columns
+    at LoanService.createLoan (D:\NTM Passbook\backend\src\modules\loans\loan.service.ts:108:10)
+    at createLoanHandler (D:\NTM Passbook\backend\src\modules\loans\loan.controller.ts:12:28)
+    at Layer.handle [as handle_request] (D:\NTM Passbook\node_modules\express\lib\router\layer.js:95:5)
+    at next (D:\NTM Passbook\node_modules\express\lib\router\route.js:149:13)
+    at <anonymous> (D:\NTM Passbook\backend\src\middleware\validate.middleware.ts:20:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_SQLITE_ERROR',
+  errcode: 1,
+  errstr: 'SQL logic error'
+}
+▶ Phase 1F: Real Loans + Cash Repayment + Balance Foundation Tests
+  ✖ 1. President can create a real loan for a member (8.256ms)
+  ✔ 2. Member cannot create/approve a loan (403 Forbidden) (3.593ms)
+  ✔ 3. Unauthorized Treasurer action is rejected (Treasurer cannot create loan: 403) (2.1166ms)
+  ✔ 4. Cross-mandal loan creation rejected (404/403 barrier) (2.0153ms)
+  ✔ 5. Invalid amount rejected (400) (2.0932ms)
+  ✔ 6. Zero or negative amount rejected (400) (3.3087ms)
+  ✖ 7. Real loan record created in database (3.9155ms)
+  ✖ 8. LOAN_DISBURSED ledger transaction created in financial_transactions (0.7649ms)
+Unhandled Server Error: Error: 9 values for 10 columns
+    at LoanService.createLoan (D:\NTM Passbook\backend\src\modules\loans\loan.service.ts:108:10)
+    at createLoanHandler (D:\NTM Passbook\backend\src\modules\loans\loan.controller.ts:12:28)
+    at Layer.handle [as handle_request] (D:\NTM Passbook\node_modules\express\lib\router\layer.js:95:5)
+    at next (D:\NTM Passbook\node_modules\express\lib\router\route.js:149:13)
+    at <anonymous> (D:\NTM Passbook\backend\src\middleware\validate.middleware.ts:20:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_SQLITE_ERROR',
+  errcode: 1,
+  errstr: 'SQL logic error'
+}
+  ✖ 9. Transaction number is unique and immutable (3.495ms)
+  ✖ 10. Audit event LOAN_CREATED created in audit_logs (0.6088ms)
+  ✖ 11. New loan balance equals real disbursed amount (3.0034ms)
+  ✖ 12. Balance is derived dynamically from real ledger transactions (0.1908ms)
+  ✔ 13. No hardcoded outstanding balance in database (0.2482ms)
+  ✖ 14. Historical loan principal amount remains unchanged (2.3773ms)
+  ✖ 15. Authorized Treasurer can record cash loan repayment (2.2989ms)
+  ✖ 16. Member cannot record cash repayment (403 Forbidden) (1.8246ms)
+  ✔ 17. Cross-mandal loan repayment rejected (404/403 barrier) (1.4822ms)
+  ✖ 18. Invalid repayment amount rejected (400) (3.5793ms)
+  ✖ 19. Overpayment rejected (repayment > outstanding balance: 400) (1.7224ms)
+  ✖ 20. Partial repayment works and updates outstanding balance correctly (1.4822ms)
+  ✖ 21. Full repayment closes the loan (status = CLOSED) (1.476ms)
+  ✖ 22. Partial repayment keeps loan ACTIVE (1.4951ms)
+  ✖ 23. Repayment creates LOAN_REPAYMENT transaction in financial_transactions (0.677ms)
+  ✖ 24. Repayment transaction ID is unique (0.8606ms)
+  ✖ 25. Duplicate repayment prevented (cannot repay on already CLOSED loan) (2.9427ms)
+Unhandled Server Error: Error: 9 values for 10 columns
+    at LoanService.createLoan (D:\NTM Passbook\backend\src\modules\loans\loan.service.ts:108:10)
+    at createLoanHandler (D:\NTM Passbook\backend\src\modules\loans\loan.controller.ts:12:28)
+    at Layer.handle [as handle_request] (D:\NTM Passbook\node_modules\express\lib\router\layer.js:95:5)
+    at next (D:\NTM Passbook\node_modules\express\lib\router\route.js:149:13)
+    at <anonymous> (D:\NTM Passbook\backend\src\middleware\validate.middleware.ts:20:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_SQLITE_ERROR',
+  errcode: 1,
+  errstr: 'SQL logic error'
+}
+  ✖ 26. Concurrent repayment protected via write lock (2.3426ms)
+  ✖ 27. Audit event LOAN_REPAYMENT_RECORDED created in audit_logs (0.5693ms)
+  ✔ 28. Rollback works on failure (0.4056ms)
+  ✖ 29. Member sees own loan disbursement in digital passbook (2.6868ms)
+  ✖ 30. Member sees own repayment in digital passbook (1.8396ms)
+  ✔ 31. Member cannot see another members loans (403 IDOR rejection) (1.5881ms)
+  ✖ 32. Member cannot see another members repayment receipts (403 IDOR rejection) (1.1776ms)
+  ✖ 33. President sees same-mandal loan records (2.1408ms)
+  ✖ 34. Treasurer sees authorized same-mandal records (2.3814ms)
+  ✔ 35. Cross-mandal loan access rejected (1.4813ms)
+  ✔ 36. Confirmed loan transaction cannot be edited (no PUT / PATCH endpoint) (1.2203ms)
+  ✔ 37. Confirmed loan transaction cannot be deleted (no DELETE endpoint) (0.9185ms)
+  ✖ 38. Loan, passbook, and ledger remain 100% consistent (0.2235ms)
+  ✔ 39. Zero fake loan data is seeded in database (0.1407ms)
+  ✔ 40. Empty state works when a member has zero loans (2.2429ms)
+✖ Phase 1F: Real Loans + Cash Repayment + Balance Foundation Tests (410.602ms)
+ℹ tests 40
+ℹ suites 1
+ℹ pass 14
+ℹ fail 26
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 848.8728
+
+✖ failing tests:
+
+test at tests\loan_and_repayment.test.ts:162:3
+✖ 1. President can create a real loan for a member (8.256ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  500 !== 201
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:175:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1516:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 500,
+    expected: 201,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:277:3
+✖ 7. Real loan record created in database (3.9155ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(loan)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:280:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:286:3
+✖ 8. LOAN_DISBURSED ledger transaction created in financial_transactions (0.7649ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(txn)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:289:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:296:3
+✖ 9. Transaction number is unique and immutable (3.495ms)
+  TypeError: Cannot read properties of undefined (reading 'disbursementTransactionNumber')
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:310:38)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at tests\loan_and_repayment.test.ts:313:3
+✖ 10. Audit event LOAN_CREATED created in audit_logs (0.6088ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(audit)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:318:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:325:3
+✖ 11. New loan balance equals real disbursed amount (3.0034ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(loan)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:331:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:336:3
+✖ 12. Balance is derived dynamically from real ledger transactions (0.1908ms)
+  TypeError: Cannot read properties of undefined (reading 'amount')
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:341:37)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at tests\loan_and_repayment.test.ts:351:3
+✖ 14. Historical loan principal amount remains unchanged (2.3773ms)
+  TypeError: Cannot read properties of undefined (reading 'amount')
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:357:29)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at tests\loan_and_repayment.test.ts:361:3
+✖ 15. Authorized Treasurer can record cash loan repayment (2.2989ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:373:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:385:3
+✖ 16. Member cannot record cash repayment (403 Forbidden) (1.8246ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 403
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:394:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 403,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:410:3
+✖ 18. Invalid repayment amount rejected (400) (3.5793ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 400
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:419:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 400,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:422:3
+✖ 19. Overpayment rejected (repayment > outstanding balance: 400) (1.7224ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 400
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:432:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 400,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:437:3
+✖ 20. Partial repayment works and updates outstanding balance correctly (1.4822ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:454:3
+✖ 21. Full repayment closes the loan (status = CLOSED) (1.476ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:464:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:471:3
+✖ 22. Partial repayment keeps loan ACTIVE (1.4951ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:478:66)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at tests\loan_and_repayment.test.ts:492:3
+✖ 23. Repayment creates LOAN_REPAYMENT transaction in financial_transactions (0.677ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(txn)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:495:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:502:3
+✖ 24. Repayment transaction ID is unique (0.8606ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(count.c >= 2)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:507:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:510:3
+✖ 25. Duplicate repayment prevented (cannot repay on already CLOSED loan) (2.9427ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 400
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:519:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 400,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:524:3
+✖ 26. Concurrent repayment protected via write lock (2.3426ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:537:54)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at tests\loan_and_repayment.test.ts:565:3
+✖ 27. Audit event LOAN_REPAYMENT_RECORDED created in audit_logs (0.5693ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(audit)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:570:12)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:600:3
+✖ 29. Member sees own loan disbursement in digital passbook (2.6868ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(txns.some((t: any) => t.transactionType === 'LOAN_DISBURSED'))
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:607:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:610:3
+✖ 30. Member sees own repayment in digital passbook (1.8396ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(txns.some((t: any) => t.transactionType === 'LOAN_REPAYMENT'))
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:616:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:629:3
+✖ 32. Member cannot see another members repayment receipts (403 IDOR rejection) (1.1776ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 403
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:634:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 403,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:637:3
+✖ 33. President sees same-mandal loan records (2.1408ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(body.data.length >= 2)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:643:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:646:3
+✖ 34. Treasurer sees authorized same-mandal records (2.3814ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(body.data.length >= 2)
+  
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:652:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\loan_and_repayment.test.ts:684:3
+✖ 38. Loan, passbook, and ledger remain 100% consistent (0.2235ms)
+  Error: no such column: "LOAN_REPAYMENT" - should this be a string literal in single-quotes?
+      at TestContext.<anonymous> (D:\NTM Passbook\backend\tests\loan_and_repayment.test.ts:688:8)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    code: 'ERR_SQLITE_ERROR',
+    errcode: 1,
+    errstr: 'SQL logic error'
+  }
+

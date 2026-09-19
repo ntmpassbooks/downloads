@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NTM Passbook</string>
+    <string name="title_activity_main">NTM Passbook</string>
+    <string name="package_name">com.ntmpassbook.app</string>
+    <string name="custom_url_scheme">com.ntmpassbook.app</string>
+</resources>

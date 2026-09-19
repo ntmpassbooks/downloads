@@ -1,0 +1,40 @@
+{
+  "name": "ntm-passbook-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NTM Passbook Backend API",
+  "main": "src/server.ts",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && node -e \"fs.mkdirSync('dist/db', { recursive: true }); fs.copyFileSync('src/db/schema.sql', 'dist/db/schema.sql');\"",
+    "start": "node dist/server.js",
+    "migrate": "tsx src/db/migrate.ts",
+    "init:prod": "tsx src/scripts/init_prod_db.ts",
+    "backup": "tsx src/scripts/backup.ts",
+    "restore": "tsx src/scripts/restore.ts",
+    "seed": "tsx src/db/seed.ts",
+    "test": "tsx --test --test-concurrency=1 tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^14.4.0",
+    "helmet": "^8.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "~5.7.3"
+  }
+}
