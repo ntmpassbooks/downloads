@@ -41,3 +41,8 @@ scratch/
 # Logs
 logs/
 *.log
+
+# Staging Test Artifacts
+*.enc
+staging-*
+

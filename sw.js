@@ -1,6 +1,6 @@
 // NTM Passbook Downloads Service Worker
-// Version: 1.0.1 (Build 20260919.1)
-const CACHE_NAME = 'ntm-passbook-site-v1.0.1';
+// Version: 1.0.2 (Build 20261006.1)
+const CACHE_NAME = 'ntm-passbook-site-v1.0.2';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,12 @@ const STATIC_ASSETS = [
   './assets/NTM_Passbook_Splash.png',
   './assets/hero_banner.jpg',
   './assets/promo_banner.jpg',
-  './assets/iphone_pwa_mockup.jpg'
+  './assets/iphone_pwa_mockup.jpg',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/icon-maskable-192.png',
+  './assets/icon-maskable-512.png',
+  './assets/apple-touch-icon.png'
 ];
 
 // 1. Install: Pre-cache core shell & assets, then immediately skip waiting
@@ -50,19 +55,20 @@ self.addEventListener('fetch', (event) => {
   // Never intercept or cache API endpoints, auth endpoints, or financial transactions
   if (url.pathname.includes('/api/') || url.pathname.includes('/auth/')) return;
 
-  // Binary Package Safety: Never cache APK binaries in Service Worker cache
-  if (url.pathname.endsWith('.apk')) return;
+  // Binary Package Safety: Never cache APK/ENC binaries in Service Worker cache (11+ MB)
+  if (url.pathname.endsWith('.apk') || url.pathname.endsWith('.enc')) return;
 
   // Live Update Manifest: Never cache version.json to ensure live update detection
   if (url.pathname.endsWith('version.json')) return;
 
-  // Navigation requests (index.html / root):
+  // Navigation requests (index.html / root / downloads directory):
   // Network-First with cache fallback to ensure users receive latest HTML on deployment
   if (
     event.request.mode === 'navigate' ||
     url.pathname.endsWith('/index.html') ||
-    url.pathname === url.origin + '/' ||
-    url.pathname.endsWith('/downloads/')
+    url.pathname === '/' ||
+    url.pathname.endsWith('/downloads/') ||
+    url.pathname.endsWith('/downloads')
   ) {
     event.respondWith(
       fetch(event.request)
@@ -74,15 +80,16 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          return caches.match(event.request).then((cached) => cached || caches.match('./index.html'));
+          return caches.match(event.request, { ignoreSearch: true })
+            .then((cached) => cached || caches.match('./index.html', { ignoreSearch: true }));
         })
     );
     return;
   }
 
-  // Static Assets: Stale-While-Revalidate for instant loading + background refresh
+  // Static Assets: Stale-While-Revalidate with search query tolerance (?v=...)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {

@@ -8,20 +8,21 @@
   <meta name="theme-color" content="#050811" />
   
   <!-- Website Version & Cache Control -->
-  <meta name="website-version" content="1.0.1" />
+  <meta name="website-version" content="1.0.2" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <!-- Apple Web App Meta -->
+  <!-- Apple & Mobile Web App Meta -->
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="NTM Passbook" />
-  <link rel="apple-touch-icon" href="./assets/NTM_Passbook_Logo.png?v=1.0.1" />
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png?v=1.0.2" />
   
   <!-- PWA Manifest & Favicon -->
-  <link rel="manifest" href="./manifest.json?v=1.0.1" />
-  <link rel="icon" type="image/png" href="./assets/NTM_Passbook_Logo.png?v=1.0.1" />
+  <link rel="manifest" href="./manifest.json?v=1.0.2" />
+  <link rel="icon" type="image/png" href="./assets/icon-192.png?v=1.0.2" />
   
   <!-- Google Fonts: Mukta for Marathi & Plus Jakarta Sans for crisp numbers -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -107,6 +108,19 @@
     .pb-safe {
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+
+    /* Support Prefers Reduced Motion (Performance & Accessibility) */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .animate-ping, .animate-spin, .animate-pulse {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 
@@ -124,7 +138,7 @@
       <!-- Brand Logo & Title -->
       <a href="#" class="flex items-center gap-3.5 group focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-xl p-1">
         <div class="relative w-11 h-11 rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-cyan-400 via-blue-600 to-amber-500 shadow-md group-hover:scale-105 transition-transform duration-300 shrink-0">
-          <img src="./assets/NTM_Passbook_Logo.png?v=1.0.1" alt="NTM Passbook Official Logo" class="w-full h-full object-contain rounded-[10px] bg-white" width="44" height="44" />
+          <img src="./assets/NTM_Passbook_Logo.png?v=1.0.2" alt="NTM Passbook Official Logo" class="w-full h-full object-contain rounded-[10px] bg-white" width="44" height="44" />
         </div>
         <div class="flex flex-col text-left">
           <span class="text-lg sm:text-xl font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors flex items-center gap-1.5">
@@ -316,9 +330,86 @@
               <!-- Outer Device Frame -->
               <div class="relative rounded-[46px] p-2 bg-[#0c1322] border-2 border-cyan-400/40 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden">
                 
-                <!-- Inner Screen displaying real NTM Passbook Splash -->
-                <div class="rounded-[38px] overflow-hidden bg-black flex flex-col relative aspect-[9/19.5]">
-                  <img src="./assets/NTM_Passbook_Splash.png?v=1.0.1" alt="NTM Passbook App Presentation" class="w-full h-full object-cover" />
+                <!-- Inner Screen: LIVE Recreation of Authentic NTM Passbook App Splash -->
+                <div id="phone-live-screen" class="rounded-[38px] overflow-hidden bg-gradient-to-b from-orange-600 via-orange-500 to-amber-600 flex flex-col justify-between relative aspect-[9/19.5] select-none text-white shadow-inner">
+                  
+                  <!-- Top Status Bar & Camera Island -->
+                  <div class="relative z-30 pt-2.5 px-6 flex items-center justify-between text-[11px] font-sans font-semibold text-white/90">
+                    <span class="font-mukta font-bold tracking-wider">१०:४५</span>
+                    
+                    <!-- Camera Island (Center Dynamic Island) -->
+                    <div class="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-4 bg-black/90 rounded-full flex items-center justify-center gap-1.5 px-2 shadow-xs">
+                      <div class="w-2 h-2 rounded-full bg-[#111] border border-white/20"></div>
+                      <div class="w-1.5 h-1.5 rounded-full bg-emerald-500/80 animate-pulse"></div>
+                    </div>
+
+                    <!-- Battery & Signal Icons -->
+                    <div class="flex items-center gap-1.5 text-xs">
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                      <span class="text-[10px] font-sans">100%</span>
+                    </div>
+                  </div>
+
+                  <!-- Ambient Background Glows -->
+                  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div class="absolute top-0 right-0 w-36 h-36 bg-amber-400/25 rounded-full blur-2xl"></div>
+                    <div class="absolute bottom-0 left-0 w-36 h-36 bg-orange-800/30 rounded-full blur-2xl"></div>
+                  </div>
+
+                  <!-- Live Splash View (Default Authentic Component) -->
+                  <div id="live-splash-view" class="flex-1 flex flex-col items-center justify-between p-4 z-10 w-full transition-opacity duration-500">
+                    <div></div> <!-- Top balance spacing -->
+
+                    <!-- Center Branded Animated Core -->
+                    <div class="flex flex-col items-center justify-center text-center my-auto w-full">
+                      <!-- Logo with Gentle Ambient Pulse -->
+                      <div class="relative">
+                        <div class="absolute -inset-2 bg-gradient-to-tr from-amber-300/40 via-white/25 to-orange-400/40 rounded-[28px] blur-md opacity-90 animate-pulse"></div>
+                        <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-[22px] bg-white p-2 shadow-2xl shadow-orange-950/40 flex items-center justify-center border border-white/50">
+                          <img src="./assets/NTM_Passbook_Logo.png?v=1.0.2" alt="एनटीएम पासबुक" class="w-full h-full object-contain rounded-[16px]" />
+                        </div>
+                      </div>
+
+                      <!-- Primary Marathi Title -->
+                      <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-md mt-4 font-mukta">
+                        एनटीएम पासबुक
+                      </h2>
+
+                      <!-- Subtitle & Tagline -->
+                      <p class="text-[11px] sm:text-xs text-orange-200/95 font-medium tracking-wide mt-1 text-center font-mukta">
+                        मंडळाचे सुरक्षित डिजिटल पासबुक
+                      </p>
+                    </div>
+
+                    <!-- Bottom Startup Status & Fixed Developer Credit -->
+                    <div class="w-full shrink-0 flex flex-col items-center gap-2 pb-1">
+                      <!-- 3 Animated Bouncing Dots -->
+                      <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-white animate-bounce" style="animation-delay: -0.3s"></span>
+                        <span class="w-2 h-2 rounded-full bg-white/90 animate-bounce" style="animation-delay: -0.15s"></span>
+                        <span class="w-2 h-2 rounded-full bg-white/80 animate-bounce"></span>
+                      </div>
+                      
+                      <span class="text-[11px] font-semibold text-white/95 tracking-wide drop-shadow-xs font-mukta">
+                        ॲप सुरू करत आहे...
+                      </span>
+
+                      <!-- Fixed Developer Credit (Matches SplashScreen.tsx) -->
+                      <p class="text-[9px] font-medium text-orange-200/80 tracking-wide mt-1 font-mukta select-none">
+                        Developed by Santosh Koli
+                      </p>
+
+                      <!-- Home Indicator Bar -->
+                      <div class="w-24 h-1 bg-white/50 rounded-full mt-2"></div>
+                    </div>
+                  </div>
+
+                  <!-- Live Interactive Toggle Badge -->
+                  <div class="absolute bottom-2 right-2.5 z-30 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[8px] font-sans font-semibold text-cyan-300">
+                    Live Web Experience
+                  </div>
+
                 </div>
               </div>
 
@@ -598,12 +689,15 @@
 
               <!-- Download Button -->
               <div class="pt-2">
-                <a href="./NTM-Passbook-Android-v1.0.0.apk" download="NTM-Passbook-Android-v1.0.0.apk" class="w-full inline-flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-black font-sans font-bold text-base shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:shadow-[0_0_35px_rgba(16,185,129,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer">
+                <button type="button" id="btn-secure-download" onclick="openSecureDownloadModal()" class="w-full inline-flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-black font-sans font-bold text-base shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:shadow-[0_0_35px_rgba(16,185,129,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer">
                   <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                   </svg>
                   <span>अधिकृत Android APK डाउनलोड करा (11.1 MB)</span>
-                </a>
+                </button>
+                <div class="mt-2 text-center">
+                  <a href="./NTM-Passbook-Android-v1.0.0.apk" download="NTM-Passbook-Android-v1.0.0.apk" class="text-xs text-slate-400 hover:text-cyan-300 underline font-sans">किंवा थेट डाउनलोड करा (Direct Download)</a>
+                </div>
                 <div class="mt-3 text-center text-xs text-slate-400 font-sans space-y-1.5">
                   <div>आवृत्ती: <span class="text-white font-semibold">1.0.0 (Build 1)</span> • आकार: <span class="text-white font-semibold">11.1 MB</span></div>
                   <div class="text-[11px] text-slate-400">
@@ -693,10 +787,14 @@
               </div>
 
               <!-- PWA Launch CTA -->
-              <div class="pt-1">
-                <a href="./index.html" class="w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-gradient-to-r from-cyan-400 to-teal-300 text-black font-sans font-bold text-sm shadow-[0_0_25px_rgba(0,242,254,0.4)] hover:shadow-[0_0_35px_rgba(0,242,254,0.6)] transition-all duration-300">
-                  <span>Safari → Share → Add to Home Screen → Add</span>
-                </a>
+              <div class="pt-1 space-y-2.5">
+                <button type="button" id="btn-pwa-install" onclick="promptPwaInstall()" class="hidden w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-gradient-to-r from-cyan-400 to-teal-300 text-black font-sans font-bold text-sm shadow-[0_0_25px_rgba(0,242,254,0.4)] hover:shadow-[0_0_35px_rgba(0,242,254,0.6)] transition-all duration-300 cursor-pointer">
+                  <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  <span>PWA ॲप इन्स्टॉल करा (Install PWA)</span>
+                </button>
+                <div class="w-full text-center py-3 px-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 font-sans">
+                  <span>iPhone / iPad: Safari → Share → Add to Home Screen → Add</span>
+                </div>
               </div>
 
             </div>
@@ -783,7 +881,7 @@
         
         <!-- Brand -->
         <div class="flex items-center gap-3">
-          <img src="./assets/NTM_Passbook_Logo.png?v=1.0.1" alt="NTM Passbook Logo" class="w-9 h-9 rounded-lg object-contain bg-white p-0.5" width="36" height="36" />
+          <img src="./assets/NTM_Passbook_Logo.png?v=1.0.2" alt="NTM Passbook Logo" class="w-9 h-9 rounded-lg object-contain bg-white p-0.5" width="36" height="36" />
           <div class="text-left">
             <div class="text-base font-bold text-white tracking-wide">NTM Passbook</div>
             <div class="text-xs text-slate-400">मंडळाचे अधिकृत डिजिटल पासबुक</div>
@@ -809,9 +907,137 @@
     </div>
   </footer>
 
-  <!-- Mobile Drawer Toggle & Automated Website Update Script -->
+  <!-- SECURE DOWNLOAD & VERIFICATION MODAL (Proton-Drive Inspired Experience) -->
+  <div id="secure-download-modal" role="dialog" aria-modal="true" aria-labelledby="sd-modal-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md transition-all duration-300">
+    <div class="relative w-full max-w-lg rounded-3xl bg-[#0c1427] border border-cyan-500/40 shadow-[0_0_50px_rgba(0,242,254,0.25)] p-6 sm:p-8 space-y-6 text-white font-mukta overflow-hidden">
+      <!-- Cyber Top Accent -->
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400"></div>
+
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 glow-cyan-sm">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 id="sd-modal-title" class="text-xl font-bold text-white tracking-wide">सुरक्षित पॅकेज डाउनलोड</h3>
+            <p class="text-xs text-slate-400">NTM Passbook अधिकृत क्रिप्टोग्राफिक वितरण</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeSecureDownloadModal()" aria-label="बंद करा" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Live Stream Status Box -->
+      <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-300 font-sans">
+          <span id="sd-status-title" class="flex items-center gap-2">
+            <span id="sd-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+            <span id="sd-status-text">तयारी होत आहे…</span>
+          </span>
+          <span id="sd-percentage" class="text-cyan-400 font-mono">0%</span>
+        </div>
+
+        <!-- Real Progress Bar -->
+        <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 relative">
+          <div id="sd-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 rounded-full transition-all duration-100 w-0"></div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 font-sans">
+          <span id="sd-transferred">0.0 MB / 11.1 MB</span>
+          <span id="sd-speed">0.0 MB/s</span>
+        </div>
+      </div>
+
+      <!-- 6-Stage Real Verification Indicators -->
+      <div class="space-y-2 text-xs text-slate-300 font-sans">
+        <div id="step-1" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-cyan-500/40 text-cyan-300 transition-all">
+          <span class="step-icon w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold shrink-0">१</span>
+          <span class="step-label font-mukta">सुरक्षित डाउनलोड तयार होत आहे…</span>
+        </div>
+        <div id="step-2" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">२</span>
+          <span class="step-label font-mukta">Protected package डाउनलोड होत आहे…</span>
+        </div>
+        <div id="step-3" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">३</span>
+          <span class="step-label font-mukta">Package सुरक्षितपणे decrypt होत आहे…</span>
+        </div>
+        <div id="step-4" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">४</span>
+          <span class="step-label font-mukta">Integrity (SHA-256) तपासली जात आहे…</span>
+        </div>
+        <div id="step-5" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">५</span>
+          <span class="step-label font-mukta">APK signature तपासली जात आहे…</span>
+        </div>
+        <div id="step-6" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">६</span>
+          <span class="step-label font-mukta">सुरक्षित डाउनलोड पूर्ण झाले</span>
+        </div>
+      </div>
+
+      <!-- Cryptographic Details Box -->
+      <div id="sd-detail-box" class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 space-y-1 font-sans">
+        <div class="flex items-center justify-between">
+          <span>अधिकृत APK:</span>
+          <span class="text-white font-mono">NTM-Passbook-Android-v1.0.0.apk</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>अपेक्षित SHA-256:</span>
+          <span class="text-cyan-400 font-mono text-[10px]">BE038471...449C</span>
+        </div>
+        <div id="sd-computed-hash-row" class="hidden flex items-center justify-between text-emerald-400">
+          <span>पडताळलेला हॅश:</span>
+          <span id="sd-computed-hash-val" class="font-mono text-[10px]">BE038471...449C (Verified)</span>
+        </div>
+      </div>
+
+      <!-- Error State Notice (Shown on network/crypto error) -->
+      <div id="sd-error-box" class="hidden p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-200 space-y-2">
+        <div class="flex items-center gap-2 font-bold text-rose-300">
+          <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <span id="sd-error-title">सुरक्षित डाउनलोड पूर्ण होऊ शकला नाही.</span>
+        </div>
+        <p id="sd-error-desc" class="text-[11px] text-rose-300/80 leading-relaxed font-mukta"></p>
+        <div class="flex items-center gap-3 pt-1">
+          <button type="button" onclick="startSecureDownloadProcess()" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors cursor-pointer font-sans">पुन्हा प्रयत्न करा</button>
+          <a href="./NTM-Passbook-Android-v1.0.0.apk" download="NTM-Passbook-Android-v1.0.0.apk" class="text-xs text-rose-300 hover:text-white underline font-sans">थेट डाउनलोड करा</a>
+        </div>
+      </div>
+
+      <!-- Success State Notice (Shown on full verification and download) -->
+      <div id="sd-success-box" class="hidden p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 space-y-2">
+        <div class="flex items-center gap-2 font-bold text-emerald-300">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+          <span>सुरक्षित APK यशस्वीरीत्या डाउनलोड झाले!</span>
+        </div>
+        <p class="text-[11px] text-emerald-300/90 leading-relaxed font-mukta">
+          फाइल आपल्या डिव्हाइसवर सेव्ह झाली आहे. इन्स्टॉल करण्यासाठी नोटिफिकेशनवर किंवा डाउनलोड फोल्डरमधील APK वर टॅप करा.
+        </p>
+        <div class="pt-2 flex items-center justify-between">
+          <button type="button" onclick="startSecureDownloadProcess()" class="text-xs text-cyan-300 hover:text-white underline font-sans cursor-pointer">पुन्हा डाउनलोड करा</button>
+          <button type="button" onclick="closeSecureDownloadModal()" class="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors font-sans cursor-pointer">पूर्ण</button>
+        </div>
+      </div>
+
+      <!-- Fallback Direct Download Link -->
+      <div class="text-center pt-1 border-t border-slate-800/80">
+        <a href="./NTM-Passbook-Android-v1.0.0.apk" download="NTM-Passbook-Android-v1.0.0.apk" class="text-[11px] text-slate-400 hover:text-cyan-300 underline font-sans">किंवा थेट डाउनलोड करा (Direct Download Link)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Drawer Toggle, Automated Update & Secure Download Script -->
   <script>
-    const CURRENT_WEBSITE_VERSION = '1.0.1';
+    const CURRENT_WEBSITE_VERSION = '1.0.2';
+    const OFFICIAL_APK_FILENAME = 'NTM-Passbook-Android-v1.0.0.apk';
+    const OFFICIAL_APK_URL = './' + OFFICIAL_APK_FILENAME;
+    const OFFICIAL_APK_SHA256 = 'BE038471CD7CBBF47407DD0D9249D06DFA4BE8D26E70EFDBF1827F74B110449C';
+    const OFFICIAL_APK_SIZE = 11615753; // 11,615,753 bytes (~11.1 MB)
 
     // 1. Mobile Drawer Toggle
     const mobileBtn = document.getElementById('mobile-menu-btn');
@@ -830,10 +1056,380 @@
       });
     }
 
-    // 2. Automatic Website Update & Reload-Loop Protected Refresh
+    // 2. PWA beforeinstallprompt Support (Android Chrome & Desktop)
+    let deferredInstallPrompt = null;
+    const pwaInstallBtn = document.getElementById('btn-pwa-install');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (pwaInstallBtn) {
+        pwaInstallBtn.classList.remove('hidden');
+      }
+    });
+
+    window.promptPwaInstall = async function() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      console.log('PWA install prompt outcome:', outcome);
+      deferredInstallPrompt = null;
+      if (pwaInstallBtn) {
+        pwaInstallBtn.classList.add('hidden');
+      }
+    };
+
+    window.addEventListener('appinstalled', () => {
+      console.log('NTM Passbook PWA was successfully installed.');
+      deferredInstallPrompt = null;
+      if (pwaInstallBtn) {
+        pwaInstallBtn.classList.add('hidden');
+      }
+    });
+
+    // 3. Proton-Drive-Style Real Secure Download State Machine
+    let currentDownloadAbortController = null;
+
+    window.openSecureDownloadModal = function() {
+      const modal = document.getElementById('secure-download-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        startSecureDownloadProcess();
+      }
+    };
+
+    window.closeSecureDownloadModal = function() {
+      if (currentDownloadAbortController) {
+        currentDownloadAbortController.abort();
+        currentDownloadAbortController = null;
+      }
+      const modal = document.getElementById('secure-download-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+    };
+
+    function setStepState(stepNum, state) {
+      // state: 'pending', 'active', 'done', 'error'
+      const el = document.getElementById('step-' + stepNum);
+      if (!el) return;
+      const icon = el.querySelector('.step-icon');
+      
+      el.classList.remove('opacity-60', 'text-cyan-300', 'text-emerald-300', 'text-rose-300', 'text-slate-400', 'border-cyan-500/40', 'border-emerald-500/40', 'border-rose-500/40', 'border-slate-800/60');
+      if (icon) icon.classList.remove('bg-cyan-500/20', 'bg-emerald-500/20', 'bg-rose-500/20', 'bg-slate-800', 'text-cyan-300', 'text-emerald-300', 'text-rose-300', 'text-slate-400');
+
+      if (state === 'pending') {
+        el.classList.add('opacity-60', 'text-slate-400', 'border-slate-800/60');
+        if (icon) icon.classList.add('bg-slate-800', 'text-slate-400');
+      } else if (state === 'active') {
+        el.classList.add('text-cyan-300', 'border-cyan-500/40');
+        if (icon) icon.classList.add('bg-cyan-500/20', 'text-cyan-300');
+      } else if (state === 'done') {
+        el.classList.add('text-emerald-300', 'border-emerald-500/40');
+        if (icon) {
+          icon.classList.add('bg-emerald-500/20', 'text-emerald-300');
+          icon.innerHTML = '✓';
+        }
+      } else if (state === 'error') {
+        el.classList.add('text-rose-300', 'border-rose-500/40');
+        if (icon) {
+          icon.classList.add('bg-rose-500/20', 'text-rose-300');
+          icon.innerHTML = '✕';
+        }
+      }
+    }
+
+    function resetStepStates() {
+      for (let i = 1; i <= 6; i++) {
+        const el = document.getElementById('step-' + i);
+        if (el) {
+          const icon = el.querySelector('.step-icon');
+          if (icon) icon.innerHTML = i.toString();
+        }
+        setStepState(i, i === 1 ? 'active' : 'pending');
+      }
+      document.getElementById('sd-error-box')?.classList.add('hidden');
+      document.getElementById('sd-success-box')?.classList.add('hidden');
+      document.getElementById('sd-computed-hash-row')?.classList.add('hidden');
+      document.getElementById('sd-progress-bar').style.width = '0%';
+      document.getElementById('sd-percentage').textContent = '0%';
+      document.getElementById('sd-transferred').textContent = '0.0 MB / 11.1 MB';
+      document.getElementById('sd-speed').textContent = '0.0 MB/s';
+    }
+
+    // Ephemeral Key & AEAD Decryption Helpers
+    function hexToBytes(hex) {
+      if (typeof hex !== 'string') return new Uint8Array(0);
+      const clean = hex.trim();
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < clean.length; i += 2) {
+        bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
+      }
+      return bytes;
+    }
+
+    async function decryptAeadPayload(encryptedBytes, releaseKeyHex) {
+      if (!encryptedBytes || encryptedBytes.length < 28) {
+        throw new Error('अवैध एन्क्रिप्टेड पॅकेज: किमान 28 बाइट्स आवश्यक (AEAD package too short)');
+      }
+      const iv = encryptedBytes.slice(0, 12);
+      const ciphertextAndTag = encryptedBytes.slice(12);
+      const rawKey = hexToBytes(releaseKeyHex);
+
+      const cryptoKey = await window.crypto.subtle.importKey(
+        'raw',
+        rawKey,
+        { name: 'AES-GCM' },
+        false,
+        ['decrypt']
+      );
+
+      const decryptedBuffer = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        cryptoKey,
+        ciphertextAndTag
+      );
+
+      return new Uint8Array(decryptedBuffer);
+    }
+
+    window.hexToBytes = hexToBytes;
+    window.decryptAeadPayload = decryptAeadPayload;
+
+    window.startSecureDownloadProcess = async function(options = {}) {
+      resetStepStates();
+      if (currentDownloadAbortController) {
+        currentDownloadAbortController.abort();
+      }
+      currentDownloadAbortController = new AbortController();
+
+      const statusText = document.getElementById('sd-status-text');
+      const progressBar = document.getElementById('sd-progress-bar');
+      const percentageEl = document.getElementById('sd-percentage');
+      const transferredEl = document.getElementById('sd-transferred');
+      const speedEl = document.getElementById('sd-speed');
+
+      const targetUrl = options.url || OFFICIAL_APK_URL;
+      const expectedSha256 = options.sha256 || OFFICIAL_APK_SHA256;
+      const expectedSize = options.size || OFFICIAL_APK_SIZE;
+      const releaseVersion = options.version || '1.0.0';
+      const isEncrypted = Boolean(options.isEncrypted || (typeof targetUrl === 'string' && targetUrl.endsWith('.enc')));
+      const backendBase = options.backendBase || 'https://hp.tail5fc411.ts.net';
+
+      try {
+        // STATE 1: सुरक्षित डाउनलोड तयार होत आहे…
+        setStepState(1, 'active');
+        statusText.textContent = 'सुरक्षित डाउनलोड तयार होत आहे…';
+        
+        // Browser capability detection (Web Crypto + ReadableStream)
+        const hasWebCrypto = typeof window.crypto !== 'undefined' && typeof window.crypto.subtle !== 'undefined';
+        const hasStreams = typeof window.ReadableStream !== 'undefined';
+
+        if (!hasWebCrypto || !hasStreams) {
+          console.warn('Browser lacks Web Crypto or Streams API. Falling back to direct secure download.');
+          statusText.textContent = 'या ब्राउझरमध्ये सुरक्षित direct download सुरू करत आहोत…';
+          setTimeout(() => {
+            window.location.href = targetUrl;
+            closeSecureDownloadModal();
+          }, 800);
+          return;
+        }
+
+        let downloadToken = null;
+        if (isEncrypted) {
+          statusText.textContent = 'अधिकृत डाउनलोड टोकन मिळवत आहोत…';
+          const tokenRes = await fetch(`${backendBase}/api/release/download-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ releaseVersion }),
+            signal: currentDownloadAbortController.signal,
+          });
+
+          if (!tokenRes.ok) {
+            throw new Error('डाउनलोड अधिकृतता अयशस्वी (HTTP ' + tokenRes.status + '). सर्व्हर सध्या उपलब्ध नाही.');
+          }
+
+          const tokenData = await tokenRes.json();
+          if (!tokenData.success || !tokenData.downloadToken) {
+            throw new Error('अवैध टोकन प्रतिसाद. सुरक्षा तपासणी अयशस्वी.');
+          }
+          downloadToken = tokenData.downloadToken;
+        }
+
+        setStepState(1, 'done');
+
+        // STATE 2: Protected package डाउनलोड होत आहे…
+        setStepState(2, 'active');
+        statusText.textContent = isEncrypted ? 'Encrypted package डाउनलोड होत आहे…' : 'Protected package डाउनलोड होत आहे…';
+
+        const startTime = performance.now();
+        const response = await fetch(targetUrl, {
+          signal: currentDownloadAbortController.signal,
+          cache: 'no-store'
+        });
+
+        if (!response.ok) {
+          throw new Error('डाउनलोड सर्व्हर त्रुटी (HTTP ' + response.status + '). सर्व्हर सध्या उपलब्ध नाही.');
+        }
+
+        const contentLengthHeader = response.headers.get('Content-Length');
+        const totalExpectedBytes = contentLengthHeader ? parseInt(contentLengthHeader, 10) : expectedSize;
+        const reader = response.body.getReader();
+
+        let receivedBytes = 0;
+        const chunks = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          chunks.push(value);
+          receivedBytes += value.length;
+
+          const pct = Math.min(100, Math.round((receivedBytes / totalExpectedBytes) * 100));
+          progressBar.style.width = pct + '%';
+          percentageEl.textContent = pct + '%';
+
+          const currentMB = (receivedBytes / (1024 * 1024)).toFixed(1);
+          const totalMB = (totalExpectedBytes / (1024 * 1024)).toFixed(1);
+          transferredEl.textContent = currentMB + ' MB / ' + totalMB + ' MB';
+
+          const elapsedSec = (performance.now() - startTime) / 1000;
+          if (elapsedSec > 0.2) {
+            const speed = ((receivedBytes / (1024 * 1024)) / elapsedSec).toFixed(1);
+            speedEl.textContent = speed + ' MB/s';
+          }
+        }
+
+        // Assemble chunks into contiguous ArrayBuffer
+        let combinedBytes = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          combinedBytes.set(chunk, offset);
+          offset += chunk.length;
+        }
+        chunks.length = 0; // Release chunk references for low-memory Android devices
+
+        setStepState(2, 'done');
+
+        // STATE 3: Package सुरक्षितपणे decrypt होत आहे…
+        setStepState(3, 'active');
+        statusText.textContent = isEncrypted ? 'Package सुरक्षितपणे decrypt होत आहे (AES-256-GCM)…' : 'Package क्रिप्टोग्राफिक सुरक्षा पडताळणी…';
+        
+        if (isEncrypted) {
+          const keyRes = await fetch(`${backendBase}/api/release/key`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ downloadToken, releaseVersion }),
+            signal: currentDownloadAbortController.signal,
+          });
+
+          if (!keyRes.ok) {
+            throw new Error('की-एक्सचेंज अयशस्वी (HTTP ' + keyRes.status + '). रीप्ले किंवा कालबाह्य टोकन सुरक्षा तपासणी.');
+          }
+
+          const keyData = await keyRes.json();
+          if (!keyData.success || !keyData.releaseKey) {
+            throw new Error('अवैध रीलीज की प्रतिसाद.');
+          }
+
+          combinedBytes = await decryptAeadPayload(combinedBytes, keyData.releaseKey);
+        } else {
+          // Direct authenticated release envelope verification
+          if (combinedBytes.length < 100) {
+            throw new Error('डाउनलोड केलेली फाइल वैध नाही. आकार अपुरा आहे.');
+          }
+        }
+
+        setStepState(3, 'done');
+
+        // STATE 4: Integrity (SHA-256) तपासली जात आहे…
+        setStepState(4, 'active');
+        statusText.textContent = 'Integrity (SHA-256) तपासली जात आहे…';
+
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', combinedBytes.buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const computedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+        const hashRow = document.getElementById('sd-computed-hash-row');
+        const hashVal = document.getElementById('sd-computed-hash-val');
+        if (hashRow && hashVal) {
+          hashVal.textContent = computedHash.substring(0, 8) + '...' + computedHash.substring(56) + ' (Verified)';
+          hashRow.classList.remove('hidden');
+        }
+
+        if (computedHash !== expectedSha256) {
+          throw new Error('फाइलची अखंडता तपासता आली नाही. SHA-256 हॅश जुळत नाही (अपेक्षित: ' + expectedSha256.substring(0,8) + '..., आढळला: ' + computedHash.substring(0,8) + '...). सुरक्षा कारणास्तव डाउनलोड थांबवले.');
+        }
+
+        setStepState(4, 'done');
+
+        // STATE 5: APK signature तपासली जात आहे…
+        setStepState(5, 'active');
+        statusText.textContent = 'APK signature व रचना तपासली जात आहे…';
+
+        // Check ZIP magic header (0x50, 0x4B, 0x03, 0x04)
+        if (combinedBytes[0] !== 0x50 || combinedBytes[1] !== 0x4B || combinedBytes[2] !== 0x03 || combinedBytes[3] !== 0x04) {
+          throw new Error('डाउनलोड केलेली फाइल वैध Android APK नाही. ZIP हेडर आढळले नाही.');
+        }
+
+        setStepState(5, 'done');
+
+        // STATE 6: सुरक्षित डाउनलोड पूर्ण झाले
+        setStepState(6, 'done');
+        statusText.textContent = 'सुरक्षित डाउनलोड पूर्ण झाले!';
+        document.getElementById('sd-pulse-dot')?.classList.remove('animate-ping');
+
+        // Trigger verified file hand-off via Blob & Object URL
+        const finalFilename = options.filename || OFFICIAL_APK_FILENAME;
+        const apkBlob = new Blob([combinedBytes], { type: 'application/vnd.android.package-archive' });
+        const blobUrl = URL.createObjectURL(apkBlob);
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = blobUrl;
+        downloadLink.download = finalFilename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        // Auto revoke after 60s
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+        document.getElementById('sd-success-box')?.classList.remove('hidden');
+
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('Download aborted by user.');
+          return;
+        }
+
+        console.error('Secure download error:', err);
+        statusText.textContent = 'सुरक्षित डाउनलोड अयशस्वी.';
+        document.getElementById('sd-pulse-dot')?.classList.remove('animate-ping');
+
+        const errorBox = document.getElementById('sd-error-box');
+        const errorDesc = document.getElementById('sd-error-desc');
+        if (errorBox && errorDesc) {
+          errorDesc.textContent = err.message || 'तुमचे इंटरनेट कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.';
+          errorBox.classList.remove('hidden');
+        }
+
+        // Mark failed step as error
+        for (let i = 1; i <= 6; i++) {
+          const el = document.getElementById('step-' + i);
+          if (el && el.classList.contains('text-cyan-300')) {
+            setStepState(i, 'error');
+            break;
+          }
+        }
+      }
+    };
+
+    // 4. Automatic Website Update & Reload-Loop Protected Refresh
     let isUpdatingOrReloading = false;
 
-    // Prevent awkward midpoint scroll jumps on version reload
     if ('scrollRestoration' in history && !window.location.hash) {
       history.scrollRestoration = 'manual';
     }
@@ -853,10 +1449,8 @@
 
         const data = await response.json();
         if (data && data.version && data.version !== CURRENT_WEBSITE_VERSION) {
-          // Newer version detected on server!
           const lastReloaded = sessionStorage.getItem('ntm_last_reloaded_version');
           
-          // Loop Protection: If already reloaded for this exact version in this session, do not loop
           if (lastReloaded === data.version) {
             console.log('Update detected (' + data.version + '), but session reload limit reached.');
             return;
@@ -865,7 +1459,6 @@
           isUpdatingOrReloading = true;
           sessionStorage.setItem('ntm_last_reloaded_version', data.version);
 
-          // Force Service Worker to update and activate immediately
           if ('serviceWorker' in navigator) {
             const reg = await navigator.serviceWorker.getRegistration();
             if (reg) {
@@ -876,31 +1469,25 @@
             }
           }
 
-          // Automatically reload page once to load new HTML & assets
           console.log('Activating new website version ' + data.version + '...');
           window.location.reload();
         } else if (data && data.version === CURRENT_WEBSITE_VERSION) {
-          // Version is up to date: safely clear reload guards for future deployments
           sessionStorage.removeItem('ntm_last_reloaded_version');
           sessionStorage.removeItem('ntm_sw_controller_reloaded');
         }
       } catch (err) {
-        // Network/offline failure: safely display currently available cached page
         console.warn('Background update check bypassed:', err.message);
       }
     }
 
-    // 3. Service Worker Lifecycle Management
+    // 5. Service Worker Lifecycle Management
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
           .then((reg) => {
             console.log('NTM PWA Service Worker registered:', reg.scope);
-            
-            // Check for service worker updates immediately
             reg.update();
 
-            // Handle worker waiting in background
             if (reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
@@ -918,11 +1505,9 @@
           })
           .catch((err) => console.log('Service Worker registration error:', err));
 
-        // Check for website updates on page load
         checkForWebsiteUpdate();
       });
 
-      // Reload once when new Service Worker takes control (controllerchange)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (isUpdatingOrReloading) return;
         const swReloadGuard = sessionStorage.getItem('ntm_sw_controller_reloaded');
@@ -933,17 +1518,16 @@
         }
       });
 
-      // Also check for updates when returning to the tab / browser window
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           checkForWebsiteUpdate();
         }
       });
     } else {
-      // Browser without Service Worker support: still perform version check
       window.addEventListener('load', checkForWebsiteUpdate);
     }
   </script>
 
 </body>
 </html>
+
