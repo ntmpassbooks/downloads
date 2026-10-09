@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import { registerPresident, getRegistrationStatus } from '../api/auth.js';
 import { useAuth } from '../context/AuthContext.js';
 import { strings } from '../i18n/mr.js';
@@ -130,11 +131,12 @@ export const RegisterPresidentModal: React.FC<RegisterPresidentModalProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
-    >
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      >
       <div className="w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[85dvh] animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
@@ -321,5 +323,6 @@ export const RegisterPresidentModal: React.FC<RegisterPresidentModalProps> = ({
         </form>
       </div>
     </div>
+  </ModalPortal>
   );
 };

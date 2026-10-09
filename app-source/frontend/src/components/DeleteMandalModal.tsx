@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import { useAuth } from '../context/AuthContext.js';
 import { permanentDeleteMandal } from '../api/organization.js';
 import {
@@ -33,21 +34,23 @@ export const DeleteMandalModal: React.FC<DeleteMandalModalProps> = ({
   // Only President is authorized
   if (user?.role !== 'PRESIDENT') {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-        <div className="bg-white rounded-2xl max-w-[calc(100%-1rem)] sm:max-w-[360px] w-full p-6 text-center space-y-4 my-auto animate-in zoom-in-95 duration-150">
-          <ShieldAlert className="w-12 h-12 text-red-600 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">अनधिकृत प्रवेश (Access Denied)</h3>
-          <p className="text-xs text-slate-500">
-            मंडळ कायमचे हटवण्याचा अधिकार केवळ अधिकृत अध्यक्षांना आहे.
-          </p>
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
-          >
-            बंद करा
-          </button>
+      <ModalPortal>
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-[calc(100%-1rem)] sm:max-w-[360px] w-full p-6 text-center space-y-4 my-auto animate-in zoom-in-95 duration-150">
+            <ShieldAlert className="w-12 h-12 text-red-600 mx-auto" />
+            <h3 className="text-base font-bold text-slate-800">अनधिकृत प्रवेश (Access Denied)</h3>
+            <p className="text-xs text-slate-500">
+              मंडळ कायमचे हटवण्याचा अधिकार केवळ अधिकृत अध्यक्षांना आहे.
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
+            >
+              बंद करा
+            </button>
+          </div>
         </div>
-      </div>
+      </ModalPortal>
     );
   }
 
@@ -84,7 +87,8 @@ export const DeleteMandalModal: React.FC<DeleteMandalModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl max-w-[calc(100%-0.5rem)] sm:max-w-[380px] w-full overflow-hidden shadow-2xl border border-red-200 flex flex-col my-auto max-h-[85dvh] animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-red-600 px-4 py-3 text-white flex items-center justify-between">
@@ -229,5 +233,6 @@ export const DeleteMandalModal: React.FC<DeleteMandalModalProps> = ({
         </form>
       </div>
     </div>
+  </ModalPortal>
   );
 };

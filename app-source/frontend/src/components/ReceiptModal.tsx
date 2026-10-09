@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   UserCheck,
 } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface ReceiptModalProps {
   transactionId: string | null;
@@ -365,12 +366,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="receipt-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
-    >
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receipt-dialog-title"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      >
       <div className="w-full max-w-[calc(100%-0.5rem)] sm:max-w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col my-auto border border-slate-100 max-h-[90dvh]">
         {/* Modal Top Header */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-4 py-3 flex items-center justify-between no-print">
@@ -588,6 +590,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 };

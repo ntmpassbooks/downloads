@@ -1,6 +1,7 @@
 import React from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import { useServerAvailability } from '../context/ServerAvailabilityContext.js';
+import { ModalPortal } from './ModalPortal';
 
 interface ServerDownBannerProps {
   onRetrySuccess?: () => void;
@@ -22,13 +23,14 @@ export const ServerDownBanner: React.FC<ServerDownBannerProps> = ({ onRetrySucce
   };
 
   return (
-    <div
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="server-down-title"
-      aria-describedby="server-down-desc"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
-    >
+    <ModalPortal>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="server-down-title"
+        aria-describedby="server-down-desc"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
+      >
       <div className="relative w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-amber-300 dark:border-amber-700/60 p-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-200 my-auto">
         {/* Warning Icon Badge */}
         <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center mb-4 shadow-inner text-amber-600 dark:text-amber-400">
@@ -64,5 +66,6 @@ export const ServerDownBanner: React.FC<ServerDownBannerProps> = ({ onRetrySucce
         </button>
       </div>
     </div>
+    </ModalPortal>
   );
 };

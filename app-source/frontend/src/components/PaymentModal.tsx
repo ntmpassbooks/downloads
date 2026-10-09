@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import QRCode from 'qrcode';
 import {
   X,
@@ -124,7 +125,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
       <div className="relative w-full max-w-[calc(100vw-24px)] sm:max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-3 sm:px-5 sm:py-4 text-white flex items-center justify-between">
@@ -424,5 +426,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

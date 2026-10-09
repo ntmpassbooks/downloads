@@ -1,4 +1,5 @@
 import React from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import {
   AlertCircle,
   CheckCircle2,
@@ -83,12 +84,13 @@ export const CenteredAlertModal: React.FC<CenteredAlertModalProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="centered-alert-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
-    >
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="centered-alert-title"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
+      >
       <div
         className={`relative w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border ${borderColor} p-5 sm:p-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-150 my-auto`}
       >
@@ -153,5 +155,6 @@ export const CenteredAlertModal: React.FC<CenteredAlertModalProps> = ({
         </div>
       </div>
     </div>
+  </ModalPortal>
   );
 };

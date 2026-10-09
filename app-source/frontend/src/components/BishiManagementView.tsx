@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { RoleBadge } from './RoleBadge.js';
 import { ReceiptModal } from './ReceiptModal.js';
 import { PaymentModal } from './PaymentModal.js';
+import { ModalPortal } from './ModalPortal';
 import {
   getBishiOverview,
   generateBishiCycle,
@@ -1218,7 +1219,8 @@ export const BishiManagementView: React.FC = () => {
       {/* MODAL 1: SET / EDIT BISHI CONFIG (President Only)        */}
       {/* ======================================================== */}
       {configModalMember && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1305,13 +1307,15 @@ export const BishiManagementView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* ======================================================== */}
       {/* MODAL 2: RECORD CASH BISHI PAYMENT (President & Treasurer) */}
       {/* ======================================================== */}
       {cashPaymentTarget && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1425,13 +1429,15 @@ export const BishiManagementView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* ======================================================== */}
       {/* MODAL 3: DELETE UNPAID BISHI RECORD MODAL                */}
       {/* ======================================================== */}
       {recordToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl p-5 max-w-[340px] w-full space-y-4 shadow-xl animate-in zoom-in-95 my-auto">
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
@@ -1476,13 +1482,15 @@ export const BishiManagementView: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* ======================================================== */}
       {/* MODAL: REJECT ONLINE PAYMENT ORDER                        */}
       {/* ======================================================== */}
       {rejectingOrder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[380px] w-full space-y-4 shadow-xl animate-in zoom-in-95 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1564,6 +1572,7 @@ export const BishiManagementView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* ======================================================== */}

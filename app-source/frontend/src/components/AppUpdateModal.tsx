@@ -1,6 +1,7 @@
 import React from 'react';
 import { Download, AlertTriangle, Sparkles, X, ShieldAlert } from 'lucide-react';
 import { AppUpdateInfo } from '../services/update.service.js';
+import { ModalPortal } from './ModalPortal';
 
 interface AppUpdateModalProps {
   updateInfo: AppUpdateInfo | null;
@@ -25,13 +26,14 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="update-dialog-title"
-    >
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-dialog-title"
+      >
+        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-amber-700 px-5 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -127,5 +129,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

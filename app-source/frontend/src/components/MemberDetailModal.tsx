@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import { Member, updateMemberStatus, updateMemberRole, deleteMember, getMemberPin } from '../api/members.js';
 import {
   BishiConfig,
@@ -453,7 +454,8 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   if (!isOpen || !member) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[85dvh] animate-in zoom-in-95 duration-150">
         
         {/* Modal Header */}
@@ -1766,5 +1768,6 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         />
       )}
     </div>
+  </ModalPortal>
   );
 };

@@ -13,6 +13,7 @@ import {
 import { getMembers, Member } from '../api/members.js';
 import { getMemberBishiRecords, BishiRecord } from '../api/bishi.js';
 import { recordVarganiContribution, FinancialTransaction } from '../api/ledger.js';
+import { ModalPortal } from './ModalPortal';
 
 interface RecordVarganiModalProps {
   isOpen: boolean;
@@ -170,9 +171,10 @@ export const RecordVarganiModal: React.FC<RecordVarganiModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-[calc(100vw-24px)] sm:max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
-        {/* Modal Header */}
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+        <div className="relative w-full max-w-[calc(100vw-24px)] sm:max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+          {/* Modal Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 sm:px-5 sm:py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs shrink-0">
@@ -387,6 +389,7 @@ export const RecordVarganiModal: React.FC<RecordVarganiModalProps> = ({
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 };

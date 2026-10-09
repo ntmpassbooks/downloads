@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ModalPortal } from './ModalPortal.js';
 import { useAuth } from '../context/AuthContext.js';
 import { strings } from '../i18n/mr.js';
 import {
@@ -560,7 +561,8 @@ export const ExpenseManagementView: React.FC = () => {
 
       {/* President Delete Confirmation Modal */}
       {expenseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="bg-red-600 px-5 py-4 text-white flex items-center justify-between">
@@ -639,6 +641,7 @@ export const ExpenseManagementView: React.FC = () => {
             </div>
           </div>
         </div>
+      </ModalPortal>
       )}
     </div>
   );

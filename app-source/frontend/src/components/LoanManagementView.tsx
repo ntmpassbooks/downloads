@@ -18,6 +18,7 @@ import { downloadLoansReport } from '../api/reporting.js';
 import { ReceiptModal } from './ReceiptModal.js';
 import { strings } from '../i18n/mr.js';
 import { useAlertModal } from '../context/AlertModalContext.js';
+import { ModalPortal } from './ModalPortal';
 import {
   HandCoins,
   PlusCircle,
@@ -886,7 +887,8 @@ export const LoanManagementView: React.FC = () => {
 
       {/* MODAL 1: Create Loan Modal with Configurable Terms & Real-Time Preview */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-[calc(100%-0.5rem)] sm:max-w-[440px] w-full p-5 space-y-4 shadow-xl border border-slate-100 max-h-[90dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1138,11 +1140,13 @@ export const LoanManagementView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* MODAL 2: Record Cash Loan Repayment (President & Treasurer) */}
       {selectedLoanForRepayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full p-5 space-y-4 shadow-xl border border-slate-100 max-h-[85dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1250,11 +1254,13 @@ export const LoanManagementView: React.FC = () => {
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* MODAL 3: Installments Schedule Modal */}
       {selectedLoanForInstallments && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-[calc(100%-0.5rem)] sm:max-w-[520px] w-full p-5 space-y-4 shadow-xl border border-slate-100 max-h-[88dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1348,11 +1354,13 @@ export const LoanManagementView: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* MODAL 4: Member Online Loan Repayment Modal */}
       {selectedLoanForOnlineRepay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-[calc(100%-0.5rem)] sm:max-w-[380px] w-full p-5 space-y-4 shadow-xl border border-slate-100 max-h-[88dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1483,11 +1491,13 @@ export const LoanManagementView: React.FC = () => {
             )}
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* MODAL 5: Delete / Cancel Loan Confirmation */}
       {loanToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-[340px] w-full p-5 space-y-4 shadow-xl border border-slate-100 my-auto">
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
@@ -1555,6 +1565,7 @@ export const LoanManagementView: React.FC = () => {
             )}
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Authentic Receipt Modal */}

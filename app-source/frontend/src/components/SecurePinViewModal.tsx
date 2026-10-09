@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { ApiResponse } from '../api/client.js';
+import { ModalPortal } from './ModalPortal';
 
 interface SecurePinViewModalProps {
   isOpen: boolean;
@@ -107,10 +108,11 @@ export const SecurePinViewModal: React.FC<SecurePinViewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-auto animate-in zoom-in-95 duration-200"
-        role="dialog"
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+        <div
+          className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-auto animate-in zoom-in-95 duration-200"
+          role="dialog"
         aria-modal="true"
         aria-labelledby="secure-pin-modal-title"
       >
@@ -318,6 +320,7 @@ export const SecurePinViewModal: React.FC<SecurePinViewModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 };
