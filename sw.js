@@ -1,6 +1,6 @@
 // NTM Passbook Downloads Service Worker
-// Version: 1.0.2 (Build 20261006.1)
-const CACHE_NAME = 'ntm-passbook-site-v1.0.2';
+// Version: 2.0.0 (Build 20261009.2)
+const CACHE_NAME = 'ntm-passbook-site-v2.0.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -54,6 +54,9 @@ self.addEventListener('fetch', (event) => {
   // Financial Safety & Backend Authoritativeness:
   // Never intercept or cache API endpoints, auth endpoints, or financial transactions
   if (url.pathname.includes('/api/') || url.pathname.includes('/auth/')) return;
+
+  // App isolation: Let the PWA application service worker handle /downloads/app/
+  if (url.pathname.includes('/app/') || url.pathname.endsWith('/app')) return;
 
   // Binary Package Safety: Never cache APK/ENC binaries in Service Worker cache (11+ MB)
   if (url.pathname.endsWith('.apk') || url.pathname.endsWith('.enc')) return;
