@@ -10,6 +10,7 @@ import { NotificationModal } from './components/NotificationModal.js';
 import { NetworkStatusBanner } from './components/NetworkStatusBanner.js';
 import { ServerDownBanner } from './components/ServerDownBanner.js';
 import { AppUpdateModal } from './components/AppUpdateModal.js';
+import { AlertModalProvider } from './context/AlertModalContext.js';
 import { checkForAppUpdate, AppUpdateInfo } from './services/update.service.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
@@ -75,10 +76,12 @@ export const App: React.FC = () => {
       <AuthProvider>
         <NotificationProvider>
           <NavigationProvider>
-            <MobileFrame>
-              <MainContent />
-              <NotificationModal />
-            </MobileFrame>
+            <AlertModalProvider>
+              <MobileFrame>
+                <MainContent />
+                <NotificationModal />
+              </MobileFrame>
+            </AlertModalProvider>
           </NavigationProvider>
         </NotificationProvider>
       </AuthProvider>

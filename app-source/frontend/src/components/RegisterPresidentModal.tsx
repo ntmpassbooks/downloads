@@ -130,8 +130,12 @@ export const RegisterPresidentModal: React.FC<RegisterPresidentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-3">
-      <div className="w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85dvh] animate-in slide-in-from-bottom duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+    >
+      <div className="w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[85dvh] animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">

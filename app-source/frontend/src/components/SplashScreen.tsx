@@ -10,7 +10,7 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ error, onRetry, mandalName }) => {
   return (
-    <div className="flex-1 flex flex-col items-center justify-between p-6 sm:p-8 bg-gradient-to-b from-orange-600 via-orange-500 to-amber-600 text-white select-none overflow-hidden h-full relative">
+    <div className="flex-1 flex flex-col items-center justify-between p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-gradient-to-b from-orange-600 via-orange-500 to-amber-600 text-white select-none overflow-hidden h-full w-full relative">
       {/* Decorative ambient background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/25 rounded-full blur-3xl"></div>
@@ -27,7 +27,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ error, onRetry, mand
           <div className="absolute -inset-2.5 bg-gradient-to-tr from-amber-300/40 via-white/20 to-orange-400/40 rounded-[34px] blur-xl opacity-90 animate-pulse"></div>
           <div className="animate-ntm-pulse-subtle relative w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-white p-2.5 shadow-2xl shadow-orange-950/30 flex items-center justify-center border border-white/40">
             <img
-              src="/NTM_Passbook_Logo.png"
+              src="./NTM_Passbook_Logo.png"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.tried) {
+                  target.dataset.tried = 'true';
+                  target.src = '/NTM_Passbook_Logo.png';
+                }
+              }}
               alt="एनटीएम पासबुक"
               className="w-full h-full object-contain rounded-[20px]"
             />

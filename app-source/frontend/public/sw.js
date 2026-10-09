@@ -6,7 +6,6 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/NTM_Passbook_Logo.png',
-  '/NTM_Passbook_Splash.png',
 ];
 self.addEventListener('install', (event) => {
   event.waitUntil(

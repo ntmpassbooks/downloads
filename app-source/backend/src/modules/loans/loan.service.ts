@@ -3,8 +3,30 @@ import { getDatabase } from '../../db/connection.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { AuthenticatedUser, ROLES } from '../../types/roles.js';
 import { LedgerService } from '../ledger/ledger.service.js';
-import { CreateLoanInput } from './loan.validation.js';
+import { CreateLoanInput, CalculateLoanPreviewInput } from './loan.validation.js';
 import { NotificationService } from '../notifications/notification.service.js';
+import {
+  LoanCalculator,
+  InterestType,
+  RatePeriod,
+  LoanCalculationResult,
+} from './loan-calculator.js';
+
+export interface LoanInstallment {
+  id: string;
+  organizationId: string;
+  loanId: string;
+  installmentNumber: number;
+  dueDate: string;
+  principalAmount: number;
+  interestAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  paidDate: string | null;
+  status: 'UPCOMING' | 'DUE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface LoanRepayment {
   id: string;
@@ -14,7 +36,9 @@ export interface LoanRepayment {
   actorId: string;
   actorName?: string;
   amount: number;
-  paymentMethod: 'CASH';
+  principalPaid: number;
+  interestPaid: number;
+  paymentMethod: 'CASH' | 'ONLINE';
   repaymentDate: string;
   transactionId: string | null;
   transactionNumber?: string;
@@ -30,10 +54,17 @@ export interface Loan {
   memberPhone?: string;
   actorId: string;
   actorName?: string;
-  amount: number;
+  amount: number; // Principal
   loanDate: string;
   status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
   interestRate: number;
+  interestType: InterestType;
+  ratePeriod: RatePeriod;
+  tenureMonths: number;
+  monthlyInstallment: number;
+  totalInterest: number;
+  totalPayable: number;
+  firstDueDate: string | null;
   notes: string | null;
   disbursementTransactionId: string | null;
   disbursementTransactionNumber?: string;
@@ -42,12 +73,27 @@ export interface Loan {
   createdAt: string;
   updatedAt: string;
   repayments?: LoanRepayment[];
+  installments?: LoanInstallment[];
 }
 
 export class LoanService {
   /**
-   * President-only loan creation and disbursement.
-   * Atomically creates loan record, LOAN_DISBURSED ledger transaction, and audit log.
+   * Calculates a real-time preview of loan installments, EMI, total interest, and schedule.
+   */
+  public static calculatePreview(input: CalculateLoanPreviewInput): LoanCalculationResult {
+    return LoanCalculator.calculateSchedule({
+      principal: input.principal,
+      interestRate: input.interestRate,
+      interestType: input.interestType,
+      ratePeriod: input.ratePeriod,
+      tenureMonths: input.tenureMonths,
+      firstDueDate: input.firstDueDate,
+    });
+  }
+
+  /**
+   * President or Treasurer loan creation and disbursement.
+   * Atomically creates loan record, loan_installments schedule, LOAN_DISBURSED ledger transaction, and audit log.
    */
   public static createLoan(
     orgId: string,
@@ -79,10 +125,29 @@ export class LoanService {
       throw new AppError('निष्क्रिय सदस्याला कर्ज देता येत नाही (Cannot grant loan to inactive member)', 400);
     }
 
+    // Self-approval safeguard: An officer cannot disburse a loan to themselves
+    if (member.id === actor.id) {
+      throw new AppError(
+        'अधिकारी स्वतःच्या खात्यावर कर्ज मंजूर करू शकत नाही. दुसऱ्या अधिकाऱ्याची (अध्यक्ष/खजिनदार) मंजुरी आवश्यक आहे. (Self-loan approval not allowed)',
+        403
+      );
+    }
+
+    // 3. Compute loan schedule
+    const schedule = LoanCalculator.calculateSchedule({
+      principal: input.amount,
+      interestRate: input.interestRate ?? 0,
+      interestType: input.interestType ?? 'FLAT',
+      ratePeriod: input.ratePeriod ?? 'ANNUAL',
+      tenureMonths: input.tenureMonths ?? 1,
+      firstDueDate: input.firstDueDate,
+    });
+
     const loanId = crypto.randomUUID();
     const txnId = crypto.randomUUID();
     const txnNumber = LedgerService.generateTransactionNumber();
     const loanDate = input.loanDate || new Date().toISOString();
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     db.exec('BEGIN IMMEDIATE TRANSACTION;');
     try {
@@ -109,8 +174,10 @@ export class LoanService {
       db.prepare(`
         INSERT INTO loans (
           id, organization_id, member_id, actor_id, amount,
-          loan_date, status, interest_rate, notes, disbursement_transaction_id
-        ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 0.0, ?, ?)
+          loan_date, status, interest_rate, interest_type, rate_period,
+          tenure_months, monthly_installment, total_interest, total_payable,
+          first_due_date, notes, disbursement_transaction_id
+        ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         loanId,
         orgId,
@@ -118,11 +185,44 @@ export class LoanService {
         actor.id,
         input.amount,
         loanDate,
+        schedule.interestRate,
+        schedule.interestType,
+        schedule.ratePeriod,
+        schedule.tenureMonths,
+        schedule.monthlyInstallment,
+        schedule.totalInterest,
+        schedule.totalPayable,
+        schedule.firstDueDate,
         input.notes || null,
         txnId
       );
 
-      // Step C: Audit log
+      // Step C: Create loan_installments records
+      const insertInstallmentStmt = db.prepare(`
+        INSERT INTO loan_installments (
+          id, organization_id, loan_id, installment_number, due_date,
+          principal_amount, interest_amount, total_amount, paid_amount,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      `);
+
+      for (const inst of schedule.installments) {
+        const instId = crypto.randomUUID();
+        const initialStatus = inst.dueDate <= todayStr ? 'DUE' : 'UPCOMING';
+        insertInstallmentStmt.run(
+          instId,
+          orgId,
+          loanId,
+          inst.installmentNumber,
+          inst.dueDate,
+          inst.principalAmount,
+          inst.interestAmount,
+          inst.totalAmount,
+          initialStatus
+        );
+      }
+
+      // Step D: Audit log
       db.prepare(`
         INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
         VALUES (?, ?, ?, 'LOAN_CREATED', ?, ?)
@@ -135,6 +235,14 @@ export class LoanService {
           memberId: member.id,
           memberName: member.full_name,
           amount: input.amount,
+          principal: input.amount,
+          interestRate: schedule.interestRate,
+          interestType: schedule.interestType,
+          ratePeriod: schedule.ratePeriod,
+          tenureMonths: schedule.tenureMonths,
+          monthlyInstallment: schedule.monthlyInstallment,
+          totalInterest: schedule.totalInterest,
+          totalPayable: schedule.totalPayable,
           transactionNumber: txnNumber,
           actorRole: actor.role,
         }),
@@ -149,11 +257,11 @@ export class LoanService {
         userId: member.id,
         type: 'LOAN_DISBURSED',
         title: 'कर्ज मंजूर व वितरित',
-        message: `आपल्या खात्यावर ₹${input.amount} चे कर्ज मंजूर व वितरित झाले आहे. पावती क्र: ${txnNumber}`,
+        message: `आपल्या खात्यावर ₹${input.amount} चे कर्ज मंजूर व वितरित झाले आहे. एकूण देय: ₹${schedule.totalPayable}. पावती क्र: ${txnNumber}`,
         entityType: 'LOAN',
         entityId: loanId,
         idempotencyKey: `loan-disbursed-${loanId}`,
-        data: { loanId, transactionId: txnId, transactionNumber: txnNumber, amount: input.amount },
+        data: { loanId, transactionId: txnId, transactionNumber: txnNumber, amount: input.amount, totalPayable: schedule.totalPayable },
       }).catch(err => console.error('Notification error (loan member):', err));
 
       const notifyRoles = actor.role === ROLES.PRESIDENT ? [ROLES.TREASURER] : [ROLES.PRESIDENT];
@@ -182,12 +290,19 @@ export class LoanService {
         amount: input.amount,
         loanDate,
         status: 'ACTIVE',
-        interestRate: 0.0,
+        interestRate: schedule.interestRate,
+        interestType: schedule.interestType,
+        ratePeriod: schedule.ratePeriod,
+        tenureMonths: schedule.tenureMonths,
+        monthlyInstallment: schedule.monthlyInstallment,
+        totalInterest: schedule.totalInterest,
+        totalPayable: schedule.totalPayable,
+        firstDueDate: schedule.firstDueDate,
         notes: input.notes || null,
         disbursementTransactionId: txnId,
         disbursementTransactionNumber: txnNumber,
         totalRepaid: 0,
-        outstandingBalance: input.amount,
+        outstandingBalance: schedule.totalPayable,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         repayments: [],
@@ -201,6 +316,8 @@ export class LoanService {
   /**
    * Records a real cash loan repayment (President or Treasurer).
    * Strict validation: Overpayment rejected; atomic database transaction; auto-closes loan upon full repayment.
+   * Allocates repayment amount across unpaid installments chronologically.
+   * Cross-officer protection: Self-recording is strictly blocked!
    */
   public static recordCashLoanRepayment(
     orgId: string,
@@ -235,6 +352,14 @@ export class LoanService {
       throw new AppError('कर्ज नोंद सापडली नाही (Loan record not found in this mandal)', 404);
     }
 
+    // Self-approval safeguard: Officer cannot record repayment on their own personal loan!
+    if (initialLoan.member_id === actor.id) {
+      throw new AppError(
+        'अधिकारी स्वतःच्या खात्यावरील कर्ज परतफेड स्वतः नोंदवू शकत नाही. दुसऱ्या अधिकाऱ्याची (अध्यक्ष/खजिनदार) नोंद आवश्यक आहे. (Self-recording not allowed: cross-officer confirmation required)',
+        403
+      );
+    }
+
     if (initialLoan.status === 'CLOSED') {
       throw new AppError('हे कर्ज आधीच पूर्ण भरले गेले आहे (This loan is already fully repaid and closed)', 400);
     }
@@ -245,7 +370,6 @@ export class LoanService {
 
     db.exec('BEGIN IMMEDIATE TRANSACTION;');
     try {
-      // Re-verify under immediate write lock
       const lockedLoan = db
         .prepare('SELECT * FROM loans WHERE id = ?')
         .get(loanId) as any;
@@ -267,7 +391,8 @@ export class LoanService {
         .get(orgId, loanId) as any;
 
       const currentRepaid = sumRow.total_repaid || 0;
-      const outstanding = lockedLoan.amount - currentRepaid;
+      const targetTotal = lockedLoan.total_payable > 0 ? lockedLoan.total_payable : lockedLoan.amount;
+      const outstanding = targetTotal - currentRepaid;
 
       // Overpayment check
       if (amount > outstanding) {
@@ -282,12 +407,58 @@ export class LoanService {
       const txnNumber = LedgerService.generateTransactionNumber();
       const repaymentDate = new Date().toISOString();
 
-      // Step A: Insert into loan_repayments
+      // Step A: Allocate repayment amount across unpaid installments
+      const installments = db
+        .prepare(`
+          SELECT * FROM loan_installments
+          WHERE loan_id = ? AND organization_id = ? AND status != 'PAID'
+          ORDER BY installment_number ASC
+        `)
+        .all(loanId, orgId) as any[];
+
+      let remainingToAllocate = amount;
+      let totalPrincipalPaid = 0;
+      let totalInterestPaid = 0;
+
+      const updateInstallmentStmt = db.prepare(`
+        UPDATE loan_installments
+        SET paid_amount = ?, paid_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+
+      for (const inst of installments) {
+        if (remainingToAllocate <= 0) break;
+
+        const unpaidOnInst = inst.total_amount - inst.paid_amount;
+        const alloc = Math.min(remainingToAllocate, unpaidOnInst);
+        const newInstPaid = inst.paid_amount + alloc;
+        remainingToAllocate -= alloc;
+
+        // Split principal and interest proportionally
+        const ratio = inst.total_amount > 0 ? alloc / inst.total_amount : 1;
+        const pAlloc = Math.round(inst.principal_amount * ratio);
+        const iAlloc = alloc - pAlloc;
+        totalPrincipalPaid += pAlloc;
+        totalInterestPaid += iAlloc;
+
+        const newInstStatus = newInstPaid >= inst.total_amount ? 'PAID' : 'PARTIALLY_PAID';
+        const paidDate = newInstStatus === 'PAID' ? repaymentDate : (inst.paid_date || repaymentDate);
+
+        updateInstallmentStmt.run(newInstPaid, paidDate, newInstStatus, inst.id);
+      }
+
+      // If no installments existed (e.g. legacy loan), treat full amount as principal
+      if (installments.length === 0) {
+        totalPrincipalPaid = amount;
+        totalInterestPaid = 0;
+      }
+
+      // Step B: Insert into loan_repayments
       db.prepare(`
         INSERT INTO loan_repayments (
           id, organization_id, loan_id, member_id, actor_id,
-          amount, payment_method, repayment_date, transaction_id, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, 'CASH', ?, ?, ?)
+          amount, principal_paid, interest_paid, payment_method, repayment_date, transaction_id, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CASH', ?, ?, ?)
       `).run(
         repaymentId,
         orgId,
@@ -295,12 +466,14 @@ export class LoanService {
         lockedLoan.member_id,
         actor.id,
         amount,
+        totalPrincipalPaid,
+        totalInterestPaid,
         repaymentDate,
         txnId,
         notes || null
       );
 
-      // Step B: Insert into financial_transactions
+      // Step C: Insert into financial_transactions
       db.prepare(`
         INSERT INTO financial_transactions (
           id, organization_id, member_id, actor_id, transaction_type,
@@ -320,17 +493,17 @@ export class LoanService {
       );
 
       const newTotalRepaid = currentRepaid + amount;
-      const newOutstanding = lockedLoan.amount - newTotalRepaid;
+      const newOutstanding = targetTotal - newTotalRepaid;
       const newStatus = newOutstanding === 0 ? 'CLOSED' : 'ACTIVE';
 
-      // Step C: Update loan status and timestamp
+      // Step D: Update loan status and timestamp
       db.prepare(`
         UPDATE loans
         SET status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(newStatus, loanId);
 
-      // Step D: Audit log
+      // Step E: Audit log
       db.prepare(`
         INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
         VALUES (?, ?, ?, 'LOAN_REPAYMENT_RECORDED', ?, ?)
@@ -345,6 +518,8 @@ export class LoanService {
           transactionNumber: txnNumber,
           memberId: lockedLoan.member_id,
           amount,
+          principalPaid: totalPrincipalPaid,
+          interestPaid: totalInterestPaid,
           newOutstanding,
           newStatus,
           actorRole: actor.role,
@@ -391,7 +566,7 @@ export class LoanService {
         {
           type: 'LOAN_REPAYMENT',
           title: 'कर्ज परतफेड नोंद',
-          message: `${lockedLoan.member_name} यांनी ₹${amount} ची कर्ज परतफेड केली. उर्वरित बाकी: ₹${newOutstanding}.`,
+          message: `${lockedLoan.member_name || initialLoan.member_name} यांनी ₹${amount} ची कर्ज परतफेड केली. उर्वरित बाकी: ₹${newOutstanding}.`,
           entityType: 'LOAN',
           entityId: loanId,
           idempotencyKey: `loan-repayment-admin-${repaymentId}`,
@@ -407,6 +582,8 @@ export class LoanService {
         actorId: actor.id,
         actorName: actor.fullName,
         amount,
+        principalPaid: totalPrincipalPaid,
+        interestPaid: totalInterestPaid,
         paymentMethod: 'CASH',
         repaymentDate,
         transactionId: txnId,
@@ -426,6 +603,13 @@ export class LoanService {
         loanDate: lockedLoan.loan_date,
         status: newStatus,
         interestRate: lockedLoan.interest_rate,
+        interestType: lockedLoan.interest_type || 'FLAT',
+        ratePeriod: lockedLoan.rate_period || 'ANNUAL',
+        tenureMonths: lockedLoan.tenure_months || 1,
+        monthlyInstallment: lockedLoan.monthly_installment || 0,
+        totalInterest: lockedLoan.total_interest || 0,
+        totalPayable: targetTotal,
+        firstDueDate: lockedLoan.first_due_date || null,
         notes: lockedLoan.notes,
         disbursementTransactionId: lockedLoan.disbursement_transaction_id,
         totalRepaid: newTotalRepaid,
@@ -442,8 +626,64 @@ export class LoanService {
   }
 
   /**
+   * Retrieves installments schedule for a loan.
+   */
+  public static getLoanInstallments(
+    orgId: string,
+    loanId: string,
+    actor: AuthenticatedUser
+  ): LoanInstallment[] {
+    const db = getDatabase();
+
+    const loan = db
+      .prepare('SELECT id, organization_id, member_id FROM loans WHERE id = ? AND organization_id = ?')
+      .get(loanId, orgId) as { id: string; organization_id: string; member_id: string } | undefined;
+
+    if (!loan) {
+      throw new AppError('कर्ज नोंद सापडली नाही (Loan record not found)', 404);
+    }
+
+    if (actor.role === ROLES.MEMBER && actor.id !== loan.member_id) {
+      throw new AppError('तुम्हाला इतर सदस्यांचे हप्ते पाहण्याची परवानगी नाही (Cannot view other member loan schedule)', 403);
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const rows = db
+      .prepare(`
+        SELECT * FROM loan_installments
+        WHERE loan_id = ? AND organization_id = ?
+        ORDER BY installment_number ASC
+      `)
+      .all(loanId, orgId) as any[];
+
+    return rows.map((r) => {
+      let status = r.status;
+      if (status !== 'PAID' && r.due_date < todayStr && r.paid_amount === 0) {
+        status = 'OVERDUE';
+      } else if (status !== 'PAID' && r.due_date < todayStr && r.paid_amount > 0) {
+        status = 'PARTIALLY_PAID';
+      }
+
+      return {
+        id: r.id,
+        organizationId: r.organization_id,
+        loanId: r.loan_id,
+        installmentNumber: r.installment_number,
+        dueDate: r.due_date,
+        principalAmount: r.principal_amount,
+        interestAmount: r.interest_amount,
+        totalAmount: r.total_amount,
+        paidAmount: r.paid_amount,
+        paidDate: r.paid_date,
+        status,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      };
+    });
+  }
+
+  /**
    * Retrieves loans for a member with dynamic calculation of total repaid and outstanding balance.
-   * Member can view only their own loans; President & Treasurer can view any in mandal.
    */
   public static getMemberLoans(
     orgId: string,
@@ -452,12 +692,10 @@ export class LoanService {
   ): Loan[] {
     const db = getDatabase();
 
-    // IDOR check: Regular member cannot view another member's loans
     if (actor.role === ROLES.MEMBER && actor.id !== memberId) {
       throw new AppError('तुम्हाला इतर सदस्यांची कर्जे पाहण्याची परवानगी नाही (Cannot view other member loans)', 403);
     }
 
-    // Verify member exists in mandal
     const member = db
       .prepare('SELECT id, full_name, phone FROM users WHERE id = ? AND organization_id = ?')
       .get(memberId, orgId) as { id: string; full_name: string; phone: string } | undefined;
@@ -481,7 +719,6 @@ export class LoanService {
       .all(orgId, memberId) as any[];
 
     return loanRows.map((row) => {
-      // Fetch repayments for this loan
       const repayments = db
         .prepare(`
           SELECT 
@@ -497,7 +734,8 @@ export class LoanService {
         .all(row.id, orgId) as any[];
 
       const totalRepaid = repayments.reduce((sum: number, r: any) => sum + r.amount, 0);
-      const outstandingBalance = Math.max(0, row.amount - totalRepaid);
+      const targetTotal = row.total_payable > 0 ? row.total_payable : row.amount;
+      const outstandingBalance = Math.max(0, targetTotal - totalRepaid);
 
       return {
         id: row.id,
@@ -511,6 +749,13 @@ export class LoanService {
         loanDate: row.loan_date,
         status: row.status,
         interestRate: row.interest_rate,
+        interestType: row.interest_type || 'FLAT',
+        ratePeriod: row.rate_period || 'ANNUAL',
+        tenureMonths: row.tenure_months || 1,
+        monthlyInstallment: row.monthly_installment || 0,
+        totalInterest: row.total_interest || 0,
+        totalPayable: targetTotal,
+        firstDueDate: row.first_due_date || null,
         notes: row.notes,
         disbursementTransactionId: row.disbursement_transaction_id,
         disbursementTransactionNumber: row.disbursement_txn_number,
@@ -526,6 +771,8 @@ export class LoanService {
           actorId: r.actor_id,
           actorName: r.actor_name,
           amount: r.amount,
+          principalPaid: r.principal_paid || r.amount,
+          interestPaid: r.interest_paid || 0,
           paymentMethod: r.payment_method,
           repaymentDate: r.repayment_date,
           transactionId: r.transaction_id,
@@ -583,7 +830,8 @@ export class LoanService {
         .all(row.id, orgId) as any[];
 
       const totalRepaid = repayments.reduce((sum: number, r: any) => sum + r.amount, 0);
-      const outstandingBalance = Math.max(0, row.amount - totalRepaid);
+      const targetTotal = row.total_payable > 0 ? row.total_payable : row.amount;
+      const outstandingBalance = Math.max(0, targetTotal - totalRepaid);
 
       return {
         id: row.id,
@@ -597,6 +845,13 @@ export class LoanService {
         loanDate: row.loan_date,
         status: row.status,
         interestRate: row.interest_rate,
+        interestType: row.interest_type || 'FLAT',
+        ratePeriod: row.rate_period || 'ANNUAL',
+        tenureMonths: row.tenure_months || 1,
+        monthlyInstallment: row.monthly_installment || 0,
+        totalInterest: row.total_interest || 0,
+        totalPayable: targetTotal,
+        firstDueDate: row.first_due_date || null,
         notes: row.notes,
         disbursementTransactionId: row.disbursement_transaction_id,
         disbursementTransactionNumber: row.disbursement_txn_number,
@@ -612,6 +867,8 @@ export class LoanService {
           actorId: r.actor_id,
           actorName: r.actor_name,
           amount: r.amount,
+          principalPaid: r.principal_paid || r.amount,
+          interestPaid: r.interest_paid || 0,
           paymentMethod: r.payment_method,
           repaymentDate: r.repayment_date,
           transactionId: r.transaction_id,
@@ -625,14 +882,6 @@ export class LoanService {
 
   /**
    * Safely deletes or cancels a loan (President or Treasurer).
-   * Financial Safeguards:
-   * 1. Rejects deletion if any loan repayments exist in loan_repayments.
-   * 2. If loan has a disbursement ledger transaction:
-   *    Protects financial integrity from destructive hard-delete.
-   *    Performs safe reversal/cancellation: marks loan as CANCELLED and disbursement transaction as CANCELLED.
-   * 3. If loan is unreferenced (no repayments, no disbursement transaction):
-   *    Safely hard-deletes loan record.
-   * 4. Member access is strictly rejected (403).
    */
   public static deleteLoan(
     orgId: string,
@@ -642,12 +891,10 @@ export class LoanService {
   ): { id: string; action: 'DELETED' | 'CANCELLED'; message: string } {
     const db = getDatabase();
 
-    // 1. Authorization: President or Treasurer only
     if (actor.role !== ROLES.PRESIDENT && actor.role !== ROLES.TREASURER) {
       throw new AppError('केवळ अध्यक्ष किंवा खजिनदार कर्ज हटवू किंवा रद्द करू शकतात (President or Treasurer only)', 403);
     }
 
-    // 2. Fetch loan in mandal
     const loan = db
       .prepare(`
         SELECT l.*, u.full_name as member_name
@@ -665,8 +912,6 @@ export class LoanService {
       throw new AppError('हे कर्ज आधीच रद्द करण्यात आले आहे (This loan is already cancelled)', 400);
     }
 
-    // 3. Inspect financial relationships:
-    // Check repayments
     const repaymentCount = db
       .prepare('SELECT COUNT(*) as count FROM loan_repayments WHERE loan_id = ? AND organization_id = ?')
       .get(loanId, orgId) as { count: number };
@@ -678,7 +923,6 @@ export class LoanService {
       );
     }
 
-    // Check disbursement transaction
     const disbursementTxnId = loan.disbursement_transaction_id;
 
     db.exec('BEGIN IMMEDIATE TRANSACTION;');
@@ -687,8 +931,6 @@ export class LoanService {
       let message = '';
 
       if (disbursementTxnId) {
-        // Financially active loan with disbursement ledger transaction:
-        // Protect from destructive hard-delete! Use safe cancellation/reversal architecture.
         db.prepare(`
           UPDATE loans
           SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP
@@ -704,7 +946,6 @@ export class LoanService {
         actionTaken = 'CANCELLED';
         message = 'कर्ज यशस्वीरीत्या रद्द केले (Loan cancelled successfully; ledger transaction marked CANCELLED)';
 
-        // Audit log
         db.prepare(`
           INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
           VALUES (?, ?, ?, 'LOAN_CANCELLED', ?, ?)
@@ -725,13 +966,12 @@ export class LoanService {
           ipAddress
         );
       } else {
-        // Safe permanent deletion for unreferenced / draft loan
+        db.prepare('DELETE FROM loan_installments WHERE loan_id = ? AND organization_id = ?').run(loanId, orgId);
         db.prepare('DELETE FROM loans WHERE id = ? AND organization_id = ?').run(loanId, orgId);
 
         actionTaken = 'DELETED';
         message = 'कर्ज नोंद यशस्वीरीत्या हटवली (Loan record deleted successfully)';
 
-        // Audit log
         db.prepare(`
           INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
           VALUES (?, ?, ?, 'LOAN_DELETED', ?, ?)

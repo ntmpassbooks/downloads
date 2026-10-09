@@ -11,6 +11,14 @@ import { validateRequest } from './middleware/validate.middleware.js';
 import { getHealth } from './modules/health/health.controller.js';
 import { getAppVersionHandler } from './modules/version/version.controller.js';
 import {
+  issueDownloadTokenHandler,
+  getReleaseKeyHandler,
+} from './modules/release/release.controller.js';
+import {
+  downloadTokenSchema,
+  releaseKeySchema,
+} from './modules/release/release.validation.js';
+import {
   login,
   logout,
   getCurrentUser,
@@ -65,6 +73,8 @@ import {
 import {
   createLoanHandler,
   recordCashLoanRepaymentHandler,
+  calculateLoanPreviewHandler,
+  getLoanInstallmentsHandler,
   getMemberLoansHandler,
   getMyLoansHandler,
   getMandalLoansHandler,
@@ -73,6 +83,7 @@ import {
 import {
   createLoanSchema,
   recordLoanRepaymentSchema,
+  calculateLoanPreviewSchema,
 } from './modules/loans/loan.validation.js';
 import {
   createExpenseHandler,
@@ -85,25 +96,40 @@ import { createExpenseSchema } from './modules/expenses/expense.validation.js';
 import {
   getMonthlyStatementHandler,
   exportAuditCsvHandler,
+  exportMonthlyStatementHandler,
+  exportPassbookHandler,
+  exportFinancialLedgerHandler,
+  exportLoansHandler,
+  exportExpensesHandler,
+  exportVarganiHandler,
+  exportMembersHandler,
+  exportAuditLogsHandler,
+  exportReceiptPdfHandler,
 } from './modules/reporting/reporting.controller.js';
 import {
   monthlyStatementQuerySchema,
   auditExportQuerySchema,
+  exportReportQuerySchema,
 } from './modules/reporting/reporting.validation.js';
 import {
   getPaymentConfigHandler,
   upsertPaymentConfigHandler,
   updatePaymentConfigStatusHandler,
   createPaymentOrderHandler,
+  createLoanPaymentOrderHandler,
   verifyPaymentHandler,
   webhookHandler,
   getOrderStatusHandler,
   getPaymentOrdersHandler,
+  getPendingPaymentOrdersHandler,
+  approvePaymentOrderHandler,
+  rejectPaymentOrderHandler,
 } from './modules/payments/payment.controller.js';
 import {
   upsertPaymentConfigSchema,
   updatePaymentConfigStatusSchema,
   createPaymentOrderSchema,
+  rejectPaymentOrderSchema,
   verifyPaymentSchema,
 } from './modules/payments/payment.validation.js';
 import {
@@ -319,6 +345,17 @@ export function createApp(): express.Application {
     requireAuth,
     getTransactionReceiptHandler
   );
+  // Transaction Receipt PDF Download (Strictly PDF ONLY!):
+  app.get(
+    '/api/transactions/:transactionId/receipt/pdf',
+    requireAuth,
+    exportReceiptPdfHandler
+  );
+  app.get(
+    '/api/transactions/:transactionId/receipt/download',
+    requireAuth,
+    exportReceiptPdfHandler
+  );
   // Mandal Financial Summary (President & Treasurer Only):
   app.get(
     '/api/ledger/mandal-summary',
@@ -342,6 +379,13 @@ export function createApp(): express.Application {
   );
 
   // 12. Loans & Udhar Foundation Routes (सभासद कर्ज, रोख परतफेड व लेजर)
+  // Calculate Loan Schedule Preview:
+  app.post(
+    '/api/loans/calculate-preview',
+    requireAuth,
+    validateRequest({ body: calculateLoanPreviewSchema }),
+    calculateLoanPreviewHandler
+  );
   // Create / Approve Loan (President & Treasurer):
   app.post(
     '/api/loans',
@@ -357,6 +401,18 @@ export function createApp(): express.Application {
     requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
     validateRequest({ body: recordLoanRepaymentSchema }),
     recordCashLoanRepaymentHandler
+  );
+  // Loan Installments Schedule (Self Member or President/Treasurer):
+  app.get(
+    '/api/loans/:loanId/installments',
+    requireAuth,
+    getLoanInstallmentsHandler
+  );
+  // Member Online Loan Repayment Order initiation:
+  app.post(
+    '/api/loans/:loanId/pay-online',
+    requireAuth,
+    createLoanPaymentOrderHandler
   );
   // Member loans (Self, President, or Treasurer):
   app.get('/api/loans/member/:memberId', requireAuth, getMemberLoansHandler);
@@ -411,13 +467,68 @@ export function createApp(): express.Application {
     deleteExpenseHandler
   );
 
-  // 15. Financial Reporting & Audit Export Foundation Routes (President & Treasurer)
+  // 15. Financial Reporting & Export Routes (PDF, Excel, CSV)
   app.get(
     '/api/reports/monthly-statement',
     requireAuth,
     requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
     validateRequest({ query: monthlyStatementQuerySchema }),
     getMonthlyStatementHandler
+  );
+  app.get(
+    '/api/reports/monthly-statement/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportMonthlyStatementHandler
+  );
+  app.get(
+    '/api/reports/passbook/export',
+    requireAuth,
+    validateRequest({ query: exportReportQuerySchema }),
+    exportPassbookHandler
+  );
+  app.get(
+    '/api/reports/financial-ledger/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportFinancialLedgerHandler
+  );
+  app.get(
+    '/api/reports/loans/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportLoansHandler
+  );
+  app.get(
+    '/api/reports/expenses/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportExpensesHandler
+  );
+  app.get(
+    '/api/reports/vargani/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportVarganiHandler
+  );
+  app.get(
+    '/api/reports/members/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportMembersHandler
+  );
+  app.get(
+    '/api/reports/audit-logs/export',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ query: exportReportQuerySchema }),
+    exportAuditLogsHandler
   );
   app.get(
     '/api/reports/export-audit',
@@ -432,7 +543,6 @@ export function createApp(): express.Application {
   app.get(
     '/api/payments/config',
     requireAuth,
-    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
     getPaymentConfigHandler
   );
   app.post(
@@ -454,6 +564,28 @@ export function createApp(): express.Application {
     '/api/payments/orders',
     requireAuth,
     getPaymentOrdersHandler
+  );
+  // List pending payment orders for manual approval (President & Treasurer)
+  app.get(
+    '/api/payments/orders/pending',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    getPendingPaymentOrdersHandler
+  );
+  // Approve online payment (President & Treasurer)
+  app.post(
+    '/api/payments/orders/:orderId/approve',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    approvePaymentOrderHandler
+  );
+  // Reject online payment (President & Treasurer)
+  app.post(
+    '/api/payments/orders/:orderId/reject',
+    requireAuth,
+    requireRole([ROLES.PRESIDENT, ROLES.TREASURER]),
+    validateRequest({ body: rejectPaymentOrderSchema }),
+    rejectPaymentOrderHandler
   );
   // Create payment order (Authenticated Member)
   app.post(
@@ -551,6 +683,18 @@ export function createApp(): express.Application {
       user: req.user,
     });
   });
+
+  // 14. Release Key-Exchange & Secure Distribution Routes (Batch 13.6)
+  app.post(
+    '/api/release/download-token',
+    validateRequest({ body: downloadTokenSchema }),
+    issueDownloadTokenHandler
+  );
+  app.post(
+    '/api/release/key',
+    validateRequest({ body: releaseKeySchema }),
+    getReleaseKeyHandler
+  );
 
   // 10. 404 Route Handler
   app.use((_req, res) => {

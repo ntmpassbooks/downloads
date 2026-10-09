@@ -17,6 +17,12 @@ import {
 } from '../api/bishi.js';
 import { recordCashBishiPayment } from '../api/ledger.js';
 import {
+  getPendingPaymentOrders,
+  approvePaymentOrder,
+  rejectPaymentOrder,
+  PaymentOrder,
+} from '../api/payments.js';
+import {
   Coins,
   CheckCircle2,
   AlertTriangle,
@@ -33,9 +39,11 @@ import {
   QrCode,
   Trash2,
 } from 'lucide-react';
+import { useAlertModal } from '../context/AlertModalContext.js';
 
 export const BishiManagementView: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess, showError } = useAlertModal();
   const isPresident = user?.role === 'PRESIDENT';
   const isTreasurer = user?.role === 'TREASURER';
   const isMember = user?.role === 'MEMBER';
@@ -91,11 +99,89 @@ export const BishiManagementView: React.FC = () => {
   const [deleteRecordLoading, setDeleteRecordLoading] = useState(false);
   const [deleteRecordError, setDeleteRecordError] = useState<string | null>(null);
 
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Unified Centered Message / Alert Feedback
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    showSuccess('संदेश', msg);
+  };
+
+  // Online Payment Orders Approval state (President & Treasurer)
+  const [pendingOrders, setPendingOrders] = useState<PaymentOrder[]>([]);
+  const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
+  const [rejectingOrder, setRejectingOrder] = useState<PaymentOrder | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionError, setRejectionError] = useState<string | null>(null);
+  const [rejectionSubmitting, setRejectionSubmitting] = useState(false);
+
+  // Fetch pending online payment orders
+  const fetchPendingOrders = useCallback(async () => {
+    if (!canManageBishi) return;
+    try {
+      const res = await getPendingPaymentOrders();
+      if (res.success && res.data) {
+        setPendingOrders(res.data);
+      }
+    } catch {
+      // Ignore
+    }
+  }, [canManageBishi]);
+
+  // Approve online payment order
+  const handleApproveOnlinePayment = async (orderId: string) => {
+    if (!canManageBishi) return;
+    setApprovingOrderId(orderId);
+    try {
+      const res = await approvePaymentOrder(orderId);
+      if (res.success && res.data) {
+        showToast('ऑनलाइन भरणा यशस्वीरीत्या मंजूर झाला!');
+        fetchOverview(selectedMonthYear);
+        fetchPendingOrders();
+        if (res.data.financialTransactionId) {
+          setActiveReceiptTxnId(res.data.financialTransactionId);
+        }
+      } else {
+        showToast(res.error || 'ऑनलाइन भरणा मंजूर करता आला नाही.');
+      }
+    } catch {
+      showToast('सर्व्हरशी संपर्क होऊ शकला नाही.');
+    } finally {
+      setApprovingOrderId(null);
+    }
+  };
+
+  // Open rejection modal
+  const handleOpenRejectModal = (order: PaymentOrder) => {
+    setRejectingOrder(order);
+    setRejectionReason('');
+    setRejectionError(null);
+  };
+
+  // Submit rejection
+  const handleConfirmReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingOrder) return;
+    const trimmed = rejectionReason.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setRejectionError('कृपया नाकारण्याचे किमान २ अक्षरी कारण प्रविष्ट करा.');
+      return;
+    }
+
+    setRejectionSubmitting(true);
+    setRejectionError(null);
+    try {
+      const res = await rejectPaymentOrder(rejectingOrder.id, trimmed);
+      if (res.success) {
+        showToast('ऑनलाइन भरणा सूचना नाकारली आहे.');
+        setRejectingOrder(null);
+        fetchPendingOrders();
+        fetchOverview(selectedMonthYear);
+      } else {
+        setRejectionError(res.error || 'भरणा नाकारता आला नाही.');
+      }
+    } catch {
+      setRejectionError('सर्व्हरशी संपर्क होऊ शकला नाही.');
+    } finally {
+      setRejectionSubmitting(false);
+    }
   };
 
   // Fetch overview for President / Treasurer
@@ -138,10 +224,11 @@ export const BishiManagementView: React.FC = () => {
   useEffect(() => {
     if (canManageBishi) {
       fetchOverview(selectedMonthYear);
+      fetchPendingOrders();
     } else if (isMember) {
       fetchMemberData();
     }
-  }, [selectedMonthYear, canManageBishi, isMember, fetchOverview, fetchMemberData]);
+  }, [selectedMonthYear, canManageBishi, isMember, fetchOverview, fetchMemberData, fetchPendingOrders]);
 
   // Cycle Generation Handler
   const handleGenerateCycle = async () => {
@@ -399,105 +486,162 @@ export const BishiManagementView: React.FC = () => {
               मंडळाचे अध्यक्ष जेव्हा तुमची मासिक बीसी रक्कम आणि देय तारीख निश्चित करतील, तेव्हा ती येथे दिसेल.
             </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Config Summary Cards */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="p-3.5 bg-white rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] text-slate-400 block font-medium">मासिक हप्ता</span>
-                <strong className="text-base font-bold text-slate-800 font-mono">
-                  ₹{memberConfig.monthlyAmount}
-                </strong>
-                <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">नियमित हप्ता</span>
-              </div>
-              <div className="p-3.5 bg-white rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] text-slate-400 block font-medium">देय तारीख</span>
-                <strong className="text-base font-bold text-slate-800 font-mono">
-                  {memberConfig.dueDay} तारीख
-                </strong>
-                <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">प्रत्येक महिन्याची</span>
-              </div>
-            </div>
+        ) : (() => {
+          const memberOverdueRecords = memberRecords.filter(
+            (r) => r.status !== 'PAID' && (r.monthYear < currentMonthYear || r.status === 'OVERDUE')
+          );
+          const memberOverdueAmount = memberOverdueRecords.reduce((sum, r) => sum + r.expectedAmount, 0);
+          const memberCurrentRecord = memberRecords.find((r) => r.monthYear === currentMonthYear);
+          const memberCurrentDueAmount =
+            memberCurrentRecord && memberCurrentRecord.status !== 'PAID' ? memberCurrentRecord.expectedAmount : 0;
+          const memberTotalDueAmount = memberOverdueAmount + memberCurrentDueAmount;
 
-            {/* Records List */}
-            <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-100 space-y-3">
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                मासिक हप्ता भरणा इतिहास
-              </h4>
+          const handleMemberPayOnline = (rec: BishiRecord) => {
+            const olderUnpaid = memberRecords.find(
+              (other) => other.status !== 'PAID' && other.monthYear < rec.monthYear
+            );
+            if (olderUnpaid) {
+              showError(
+                'थकीत बिशी आधी भरा',
+                `प्रथम मागील थकीत महिना (${olderUnpaid.monthYear}) ची बीसी भरणे आवश्यक आहे.`
+              );
+              return;
+            }
+            setOnlinePaymentRecord(rec);
+          };
 
-              {memberRecords.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">
-                  सध्या कोणतीही बीशी नोंद उपलब्ध नाही.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {memberRecords.map((rec) => (
-                    <div
-                      key={rec.id}
-                      className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-800 font-mono">
-                            {rec.monthYear}
-                          </span>
-                          {rec.status === 'PAID' ? (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                              भरणा पूर्ण
-                            </span>
-                          ) : (
-                            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                              प्रलंबित
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-slate-400 block">
-                          देय: {new Date(rec.dueDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'short' })}
-                        </span>
-                      </div>
-
-                      <div className="text-right flex items-center gap-2">
-                        <div>
-                          <strong className="text-xs font-bold text-slate-800 font-mono block">
-                            ₹{rec.status === 'PAID' ? rec.paidAmount : rec.expectedAmount}
-                          </strong>
-                          {rec.paidDate && (
-                            <span className="text-[9px] text-slate-400 block">
-                              जमा: {new Date(rec.paidDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'short' })}
-                            </span>
-                          )}
-                        </div>
-
-                        {rec.status === 'PAID' && rec.paymentTransactionId && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveReceiptTxnId(rec.paymentTransactionId!)}
-                            className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                            title="पावती पहा"
-                          >
-                            <Receipt className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {rec.status === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => setOnlinePaymentRecord(rec)}
-                            className="px-2.5 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all min-h-[36px] cursor-pointer"
-                            title="ऑनलाइन भरा (UPI / QR)"
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            <span>ऑनलाइन भरा</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+          return (
+            <div className="space-y-4">
+              {/* Overdue, Current & Total Due Hero Metric Matrix */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5 text-center">
+                <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl shadow-xs">
+                  <span className="text-[10px] text-amber-800 block font-bold">थकीत बिशी</span>
+                  <strong className="text-sm sm:text-base font-bold text-amber-900 font-mono">
+                    ₹{memberOverdueAmount}
+                  </strong>
                 </div>
-              )}
+                <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-2xl shadow-xs">
+                  <span className="text-[10px] text-blue-800 block font-bold">चालू बिशी</span>
+                  <strong className="text-sm sm:text-base font-bold text-blue-900 font-mono">
+                    ₹{memberCurrentDueAmount}
+                  </strong>
+                </div>
+                <div className="p-3 bg-orange-50 border border-orange-200/80 rounded-2xl shadow-xs">
+                  <span className="text-[10px] text-orange-800 block font-bold">एकूण देय</span>
+                  <strong className="text-sm sm:text-base font-bold text-orange-900 font-mono">
+                    ₹{memberTotalDueAmount}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Config Summary Cards */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-3 bg-white rounded-2xl border border-slate-100 shadow-xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">मासिक हप्ता</span>
+                  <strong className="text-sm sm:text-base font-bold text-slate-800 font-mono">
+                    ₹{memberConfig.monthlyAmount}
+                  </strong>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">नियमित हप्ता</span>
+                </div>
+                <div className="p-3 bg-white rounded-2xl border border-slate-100 shadow-xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">देय तारीख</span>
+                  <strong className="text-sm sm:text-base font-bold text-slate-800 font-mono">
+                    {memberConfig.dueDay} तारीख
+                  </strong>
+                  <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">प्रत्येक महिन्याची</span>
+                </div>
+              </div>
+
+              {/* Records List */}
+              <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-100 space-y-3">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  मासिक हप्ता भरणा इतिहास
+                </h4>
+
+                {memberRecords.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">
+                    सध्या कोणतीही बीशी नोंद उपलब्ध नाही.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {memberRecords.map((rec) => {
+                      const isOverdue =
+                        rec.status === 'OVERDUE' || (rec.status !== 'PAID' && rec.monthYear < currentMonthYear);
+
+                      return (
+                        <div
+                          key={rec.id}
+                          className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-800 font-mono">
+                                {rec.monthYear}
+                              </span>
+                              {rec.status === 'PAID' ? (
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                                  भरणा पूर्ण
+                                </span>
+                              ) : isOverdue ? (
+                                <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>थकीत</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                                  प्रलंबित
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 block">
+                              देय: {new Date(rec.dueDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'short' })}
+                            </span>
+                          </div>
+
+                          <div className="text-right flex items-center gap-2">
+                            <div>
+                              <strong className="text-xs font-bold text-slate-800 font-mono block">
+                                ₹{rec.status === 'PAID' ? rec.paidAmount : rec.expectedAmount}
+                              </strong>
+                              {rec.paidDate && (
+                                <span className="text-[9px] text-slate-400 block">
+                                  जमा: {new Date(rec.paidDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                            </div>
+
+                            {rec.status === 'PAID' && rec.paymentTransactionId && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveReceiptTxnId(rec.paymentTransactionId!)}
+                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                title="पावती पहा"
+                              >
+                                <Receipt className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {rec.status !== 'PAID' && (
+                              <button
+                                type="button"
+                                onClick={() => handleMemberPayOnline(rec)}
+                                className="px-2.5 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all min-h-[36px] cursor-pointer"
+                                title="ऑनलाइन भरा (UPI / QR)"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>ऑनलाइन भरा</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Digital Receipt Modal */}
         <ReceiptModal
@@ -532,19 +676,97 @@ export const BishiManagementView: React.FC = () => {
   // ==========================================
   return (
     <div className="space-y-4 pb-12">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-in fade-in shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="font-medium">{toastMessage}</span>
-        </div>
-      )}
 
       {/* Overview Error Notice */}
       {overviewError && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs flex items-center gap-2 animate-in fade-in">
           <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
           <span>{overviewError}</span>
+        </div>
+      )}
+
+      {/* Online Payment Approvals Section (President & Treasurer) */}
+      {canManageBishi && pendingOrders.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-300 rounded-3xl p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-xs">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">
+                  ऑनलाइन भरणा पडताळणी
+                </h4>
+                <p className="text-[10px] text-slate-500">
+                  सदस्यांनी पाठवलेल्या भरणा सूचना
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 bg-amber-500 text-white rounded-full text-xs font-bold shadow-xs">
+              {pendingOrders.length} प्रलंबित
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {pendingOrders.map((order) => (
+              <div
+                key={order.id}
+                className="bg-white rounded-2xl p-3.5 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-900">
+                      {order.memberName || 'सदस्य'}
+                    </span>
+                    {order.memberPhone && (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        (+91 {order.memberPhone})
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      पडताळणी प्रलंबित
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 flex items-center gap-3">
+                    <span>महिना: <strong className="font-mono text-slate-800">{order.bishiMonth || '-'}</strong></span>
+                    <span>रक्कम: <strong className="font-mono text-slate-900 font-bold">₹{order.amount}</strong></span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(order.createdAt).toLocaleDateString('mr-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button
+                    type="button"
+                    disabled={approvingOrderId === order.id}
+                    onClick={() => handleApproveOnlinePayment(order.id)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all cursor-pointer disabled:opacity-50 min-h-[36px]"
+                  >
+                    {approvingOrderId === order.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>मंजूर करा</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRejectModal(order)}
+                    className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 active:scale-95 text-red-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer min-h-[36px]"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>नाकारा</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -901,7 +1123,7 @@ export const BishiManagementView: React.FC = () => {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             record.status === 'OVERDUE'
@@ -911,6 +1133,11 @@ export const BishiManagementView: React.FC = () => {
                         >
                           {record.status === 'OVERDUE' ? 'थकबाकी' : 'प्रलंबित'}: ₹{record.expectedAmount}
                         </span>
+                        {record && pendingOrders.some((o) => o.bishiRecordId === record.id) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                            📱 ऑनलाइन सूचना
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -929,6 +1156,28 @@ export const BishiManagementView: React.FC = () => {
                         <span>पावती</span>
                       </button>
                     )}
+
+                    {/* Online payment direct approval if notice received */}
+                    {canManageBishi && isPending && record && (() => {
+                      const matchOrder = pendingOrders.find((o) => o.bishiRecordId === record.id);
+                      if (!matchOrder) return null;
+                      return (
+                        <button
+                          type="button"
+                          disabled={approvingOrderId === matchOrder.id}
+                          onClick={() => handleApproveOnlinePayment(matchOrder.id)}
+                          className="px-2.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-xs font-bold transition-all flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                          title="ऑनलाइन भरणा मंजूर करा"
+                        >
+                          {approvingOrderId === matchOrder.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>मंजूर करा (ऑनलाइन)</span>
+                        </button>
+                      );
+                    })()}
 
                     {/* Record Cash Payment button for PENDING record (President & Treasurer) */}
                     {canManageBishi && isPending && record && (
@@ -969,8 +1218,8 @@ export const BishiManagementView: React.FC = () => {
       {/* MODAL 1: SET / EDIT BISHI CONFIG (President Only)        */}
       {/* ======================================================== */}
       {configModalMember && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
@@ -1062,8 +1311,8 @@ export const BishiManagementView: React.FC = () => {
       {/* MODAL 2: RECORD CASH BISHI PAYMENT (President & Treasurer) */}
       {/* ======================================================== */}
       {cashPaymentTarget && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[360px] w-full space-y-4 shadow-xl animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
@@ -1182,8 +1431,8 @@ export const BishiManagementView: React.FC = () => {
       {/* MODAL 3: DELETE UNPAID BISHI RECORD MODAL                */}
       {/* ======================================================== */}
       {recordToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl p-5 max-w-[340px] w-full space-y-4 shadow-xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 max-w-[340px] w-full space-y-4 shadow-xl animate-in zoom-in-95 my-auto">
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5" />
@@ -1225,6 +1474,94 @@ export const BishiManagementView: React.FC = () => {
                 {deleteRecordLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'नोंद हटवा'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: REJECT ONLINE PAYMENT ORDER                        */}
+      {/* ======================================================== */}
+      {rejectingOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 max-w-[calc(100%-0.5rem)] sm:max-w-[380px] w-full space-y-4 shadow-xl animate-in zoom-in-95 my-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">ऑनलाइन भरणा नाकारा</h4>
+                  <p className="text-[10px] text-slate-400">
+                    {rejectingOrder.memberName} ({rejectingOrder.bishiMonth})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingOrder(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {rejectionError && (
+              <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                <span>{rejectionError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmReject} className="space-y-3">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                <div className="flex justify-between text-slate-600">
+                  <span>सदस्य:</span>
+                  <strong className="text-slate-800">{rejectingOrder.memberName}</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>रक्कम:</span>
+                  <strong className="text-slate-800 font-mono">₹{rejectingOrder.amount}</strong>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  नाकारण्याचे कारण (अनिवार्य) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="उदा. बँक खात्यात रक्कम जमा झालेली नाही"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                />
+                <p className="text-[10px] text-slate-400">
+                  हे कारण सदस्याला पाठवले जाईल आणि बीशी हप्ता प्रलंबित राहील.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectingOrder(null)}
+                  className="w-1/2 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="submit"
+                  disabled={rejectionSubmitting}
+                  className="w-1/2 py-2.5 px-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {rejectionSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <span>नाकारा</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

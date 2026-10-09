@@ -30,13 +30,14 @@ import {
   Clock,
   ArrowUpRight,
   HandCoins,
-  CheckCircle2,
   ExternalLink,
   ShieldAlert,
 } from 'lucide-react';
+import { useAlertModal } from '../context/AlertModalContext.js';
 
 export const ExpenseManagementView: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess, showError } = useAlertModal();
   const canManageExpenses = user?.role === 'PRESIDENT' || user?.role === 'TREASURER';
   const isPresident = user?.role === 'PRESIDENT';
 
@@ -61,11 +62,9 @@ export const ExpenseManagementView: React.FC = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Unified Centered Message / Alert Feedback
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    showSuccess('संदेश', msg);
   };
 
   const fetchSummary = useCallback(async () => {
@@ -120,10 +119,13 @@ export const ExpenseManagementView: React.FC = () => {
         fetchExpenses(selectedCategory);
         fetchSummary();
       } else {
-        setDeleteError(res.error || 'खर्च हटवताना अडचण आली.');
+        const errMsg = res.error || 'खर्च हटवताना अडचण आली.';
+        setDeleteError(errMsg);
+        showError('त्रुटी', errMsg);
       }
     } catch {
       setDeleteError('सर्व्हरशी संपर्क होऊ शकला नाही.');
+      showError('त्रुटी', 'सर्व्हरशी संपर्क होऊ शकला नाही.');
     } finally {
       setDeleteLoading(false);
     }
@@ -180,13 +182,6 @@ export const ExpenseManagementView: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-12">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs flex items-center gap-2 animate-in fade-in shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
 
       {/* ========================================== */}
       {/* 1. MANDAL FINANCIAL SUMMARY (आर्थिक स्थिती) */}
@@ -566,7 +561,7 @@ export const ExpenseManagementView: React.FC = () => {
       {/* President Delete Confirmation Modal */}
       {expenseToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="bg-red-600 px-5 py-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">

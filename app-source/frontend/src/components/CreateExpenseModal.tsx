@@ -92,8 +92,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[85dvh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white rounded-3xl w-full max-w-[calc(100%-0.5rem)] sm:max-w-[380px] overflow-hidden shadow-2xl border border-slate-100 flex flex-col my-auto max-h-[85dvh] animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-4 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">

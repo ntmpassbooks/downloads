@@ -1,27 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getMembers, createMember, updateMemberStatus, Member } from '../api/members.js';
 import { RoleBadge } from './RoleBadge.js';
+import { useAlertModal } from '../context/AlertModalContext.js';
 import {
   Users,
   UserPlus,
   Phone,
   Lock,
   UserCheck,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
   Power,
   RefreshCw,
 } from 'lucide-react';
 
 export const MemberManagement: React.FC = () => {
+  const { showSuccess, showError } = useAlertModal();
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [members, setMembers] = useState<Member[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -33,7 +32,6 @@ export const MemberManagement: React.FC = () => {
   // Fetch real members from backend
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    setFeedback(null);
     try {
       const res = await getMembers(1, 50, statusFilter);
       if (res.success && res.data) {
@@ -44,20 +42,14 @@ export const MemberManagement: React.FC = () => {
           setTotalCount(res.data.length);
         }
       } else {
-        setFeedback({
-          type: 'error',
-          message: res.error || 'सदस्य यादी लोड करता आली नाही.',
-        });
+        showError('त्रुटी', res.error || 'सदस्य यादी लोड करता आली नाही.');
       }
     } catch {
-      setFeedback({
-        type: 'error',
-        message: 'सर्व्हरशी संपर्क होऊ शकला नाही.',
-      });
+      showError('त्रुटी', 'सर्व्हरशी संपर्क होऊ शकला नाही.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, showError]);
 
   useEffect(() => {
     loadMembers();
@@ -66,16 +58,15 @@ export const MemberManagement: React.FC = () => {
   // Handle member creation
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFeedback(null);
 
     const cleanedPhone = phone.trim().replace(/\D/g, '');
     if (!/^[6-9]\d{9}$/.test(cleanedPhone)) {
-      setFeedback({ type: 'error', message: 'कृपया वैध १० अंकी मोबाईल नंबर प्रविष्ट करा.' });
+      showError('वैधता त्रुटी', 'कृपया वैध १० अंकी मोबाईल नंबर प्रविष्ट करा.');
       return;
     }
 
     if (!fullName.trim() || fullName.trim().length < 2) {
-      setFeedback({ type: 'error', message: 'नाव किमान २ अक्षरांचे असणे आवश्यक आहे.' });
+      showError('वैधता त्रुटी', 'नाव किमान २ अक्षरांचे असणे आवश्यक आहे.');
       return;
     }
 
@@ -89,10 +80,7 @@ export const MemberManagement: React.FC = () => {
       });
 
       if (res.success) {
-        setFeedback({
-          type: 'success',
-          message: 'नवीन सदस्य यशस्वीरीत्या जोडला गेला!',
-        });
+        showSuccess('यशस्वी', 'नवीन सदस्य यशस्वीरीत्या जोडला गेला!');
         setFullName('');
         setPhone('');
         setInitialPin('1234');
@@ -100,13 +88,10 @@ export const MemberManagement: React.FC = () => {
         setActiveTab('list');
         loadMembers();
       } else {
-        setFeedback({
-          type: 'error',
-          message: res.error || 'सदस्य जोडण्यात त्रुटी निर्माण झाली.',
-        });
+        showError('त्रुटी', res.error || 'सदस्य जोडण्यात त्रुटी निर्माण झाली.');
       }
     } catch {
-      setFeedback({ type: 'error', message: 'नेटवर्क त्रुटी निर्माण झाली.' });
+      showError('त्रुटी', 'नेटवर्क त्रुटी निर्माण झाली.');
     } finally {
       setSubmitting(false);
     }
@@ -115,35 +100,31 @@ export const MemberManagement: React.FC = () => {
   // Handle status toggle (Activate / Deactivate)
   const handleToggleStatus = async (member: Member) => {
     if (member.role === 'PRESIDENT') {
-      setFeedback({ type: 'error', message: 'अध्यक्षांचे खाते निष्क्रिय करता येत नाही.' });
+      showError('परवानगी त्रुटी', 'अध्यक्षांचे खाते निष्क्रिय करता येत नाही.');
       return;
     }
 
     setActionLoading(member.id);
-    setFeedback(null);
     const newStatus = !member.isActive;
 
     try {
       const res = await updateMemberStatus(member.id, newStatus);
       if (res.success && res.data) {
-        setFeedback({
-          type: 'success',
-          message: newStatus
+        showSuccess(
+          'यशस्वी',
+          newStatus
             ? `${member.fullName} यांचे खाते सक्रिय केले गेले.`
-            : `${member.fullName} यांचे खाते निष्क्रिय केले गेले.`,
-        });
+            : `${member.fullName} यांचे खाते निष्क्रिय केले गेले.`
+        );
         // Update state locally with real returned record
         setMembers((prev) =>
           prev.map((m) => (m.id === member.id ? { ...m, isActive: newStatus } : m))
         );
       } else {
-        setFeedback({
-          type: 'error',
-          message: res.error || 'स्थिती बदलता आली नाही.',
-        });
+        showError('त्रुटी', res.error || 'स्थिती बदलता आली नाही.');
       }
     } catch {
-      setFeedback({ type: 'error', message: 'सर्व्हरशी संपर्क होऊ शकला नाही.' });
+      showError('त्रुटी', 'सर्व्हरशी संपर्क होऊ शकला नाही.');
     } finally {
       setActionLoading(null);
     }
@@ -170,10 +151,7 @@ export const MemberManagement: React.FC = () => {
         {/* Tab Buttons */}
         <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
           <button
-            onClick={() => {
-              setActiveTab('list');
-              setFeedback(null);
-            }}
+            onClick={() => setActiveTab('list')}
             className={`px-2.5 py-1 rounded-md transition-all ${
               activeTab === 'list'
                 ? 'bg-white text-orange-600 shadow-sm font-bold'
@@ -183,10 +161,7 @@ export const MemberManagement: React.FC = () => {
             यादी
           </button>
           <button
-            onClick={() => {
-              setActiveTab('create');
-              setFeedback(null);
-            }}
+            onClick={() => setActiveTab('create')}
             className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
               activeTab === 'create'
                 ? 'bg-white text-orange-600 shadow-sm font-bold'
@@ -198,24 +173,6 @@ export const MemberManagement: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Feedback Banner */}
-      {feedback && (
-        <div
-          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 transition-all ${
-            feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-red-50 border-red-200 text-red-800'
-          }`}
-        >
-          {feedback.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-          )}
-          <span>{feedback.message}</span>
-        </div>
-      )}
 
       {/* TAB 1: Real Member Directory */}
       {activeTab === 'list' && (

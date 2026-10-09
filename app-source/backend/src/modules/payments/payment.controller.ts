@@ -156,3 +156,99 @@ export function getPaymentOrdersHandler(req: Request, res: Response): void {
   });
 }
 
+export function getPendingPaymentOrdersHandler(req: Request, res: Response): void {
+  const actor = req.user!;
+  const pendingOrders = PaymentService.getPendingPaymentOrders(actor.organizationId);
+
+  res.status(200).json({
+    success: true,
+    data: pendingOrders,
+  });
+}
+
+export function approvePaymentOrderHandler(
+  req: Request<{ orderId: string }>,
+  res: Response,
+  next: NextFunction
+): void {
+  try {
+    const actor = req.user!;
+    const { orderId } = req.params;
+    const ipAddress = req.ip || (req.headers['x-forwarded-for'] as string) || '';
+
+    const result = PaymentService.approveOnlinePayment(
+      actor.organizationId,
+      actor,
+      orderId,
+      ipAddress
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'ऑनलाइन भरणा यशस्वीरीत्या मंजूर करण्यात आला (Payment approved successfully)',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export function rejectPaymentOrderHandler(
+  req: Request<{ orderId: string }, {}, { reason: string }>,
+  res: Response,
+  next: NextFunction
+): void {
+  try {
+    const actor = req.user!;
+    const { orderId } = req.params;
+    const { reason } = req.body;
+    const ipAddress = req.ip || (req.headers['x-forwarded-for'] as string) || '';
+
+    const result = PaymentService.rejectOnlinePayment(
+      actor.organizationId,
+      actor,
+      orderId,
+      reason,
+      ipAddress
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'ऑनलाइन भरणा नाकारण्यात आला (Payment rejected)',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createLoanPaymentOrderHandler(
+  req: Request<{ loanId: string }, {}, { amount: number }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const actor = req.user!;
+    const ipAddress = req.ip || (req.headers['x-forwarded-for'] as string) || '';
+    const { loanId } = req.params;
+    const { amount } = req.body;
+
+    const result = await PaymentService.createLoanPaymentOrder(
+      actor.organizationId,
+      actor.id,
+      loanId,
+      amount,
+      ipAddress
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'कर्ज परतफेड ऑनलाइन ऑर्डर तयार झाली (Loan repayment order created)',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+

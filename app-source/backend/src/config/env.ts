@@ -39,6 +39,10 @@ const envSchema = z.object({
     .string()
     .min(32, 'BANK_ENCRYPTION_KEY must be at least 32 characters for cryptographic security')
     .default('dev_bank_encryption_secret_key_32_chars_local!'),
+  RELEASE_MASTER_KEY: z
+    .string()
+    .min(32, 'RELEASE_MASTER_KEY must be at least 32 characters for cryptographic security')
+    .default('dev_release_master_encryption_key_32_chars!'),
   // Optional Firebase Admin Configuration
   FIREBASE_PROJECT_ID: z.string().optional(),
   FIREBASE_CLIENT_EMAIL: z.string().optional(),

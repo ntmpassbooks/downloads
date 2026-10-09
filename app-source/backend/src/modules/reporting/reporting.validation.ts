@@ -26,3 +26,17 @@ export const auditExportQuerySchema = z.object({
 });
 
 export type AuditExportQuery = z.infer<typeof auditExportQuerySchema>;
+
+export const exportReportQuerySchema = z.object({
+  format: z.enum(['pdf', 'excel', 'csv']).default('pdf'),
+  monthYear: z
+    .string()
+    .regex(
+      /^\d{4}-(0[1-9]|1[0-2])$/,
+      'अवैध महिना फॉरमॅट (Must be YYYY-MM)'
+    )
+    .optional(),
+  memberId: z.string().optional(),
+});
+
+export type ExportReportQuery = z.infer<typeof exportReportQuerySchema>;

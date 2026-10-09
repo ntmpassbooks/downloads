@@ -6,6 +6,7 @@ import {
   FinancialTransaction,
 } from '../api/ledger.js';
 import { ReceiptModal } from './ReceiptModal.js';
+import { OfflinePassbookCacheService } from '../services/offlinePassbookCache.service.js';
 import {
   Wallet,
   FileText,
@@ -15,6 +16,7 @@ import {
   AlertTriangle,
   Coins,
   RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 
 export const TransactionsView: React.FC = () => {
@@ -30,42 +32,151 @@ export const TransactionsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeReceiptTxnId, setActiveReceiptTxnId] = useState<string | null>(null);
 
+  // Offline Passbook States
+  const [isOfflineMode, setIsOfflineMode] = useState<boolean>(() => {
+    return typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  });
+  const [isCachedData, setIsCachedData] = useState<boolean>(false);
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(null);
+
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      if (isOfficer) {
+
+    const isCurrentlyOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+    // 1. Officer Ledger Flow (Requires authoritative live network; never cached offline)
+    if (isOfficer) {
+      if (!isCurrentlyOnline) {
+        setLoading(false);
+        setIsOfflineMode(true);
+        setIsCachedData(false);
+        setError('मंडळाचे संपूर्ण लेजर पाहण्यासाठी इंटरनेट कनेक्शन आवश्यक आहे. (ऑफिसर लेजर ऑफलाइन सेव्ह केले जात नाही).');
+        setTransactions([]);
+        setTotalInflow(0);
+        setTotalTransactionsCount(0);
+        return;
+      }
+      try {
         const res = await getOrganizationLedger(1, 100);
         if (res.success && res.data) {
-          // Filter out EXPENSE from normal member transaction presentation
           const memberTxns = res.data.transactions.filter(
             (t) => t.transactionType !== 'EXPENSE'
           );
           setTransactions(memberTxns);
           setTotalInflow(res.data.summary.totalInflow);
           setTotalTransactionsCount(memberTxns.length);
+          setIsOfflineMode(false);
+          setIsCachedData(false);
+          setLastSyncTimestamp(new Date().toISOString());
         } else {
           setError(res.error || 'व्यवहार लोड करता आले नाहीत.');
         }
-      } else {
-        const res = await getMyPassbook();
-        if (res.success && res.data) {
-          setTransactions(res.data.transactions);
-          setTotalInflow(res.data.totalPaid);
-          setTotalTransactionsCount(res.data.totalTransactions);
+      } catch {
+        setError('सर्व्हरशी संपर्क होऊ शकला नाही.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 2. Member Personal Passbook Flow
+    if (!isCurrentlyOnline) {
+      setIsOfflineMode(true);
+      if (user?.organizationId && user?.id) {
+        const cacheResult = OfflinePassbookCacheService.getPassbook(user.organizationId, user.id);
+        if (cacheResult.passbook) {
+          setTransactions(cacheResult.passbook.transactions);
+          setTotalInflow(cacheResult.passbook.totalPaid);
+          setTotalTransactionsCount(cacheResult.passbook.totalTransactions);
+          setIsCachedData(true);
+          setLastSyncTimestamp(cacheResult.passbook.lastSyncTimestamp);
+          setError(null);
         } else {
-          setError(res.error || 'व्यवहार लोड करता आले नाहीत.');
+          setTransactions([]);
+          setTotalInflow(0);
+          setTotalTransactionsCount(0);
+          setIsCachedData(false);
+          setLastSyncTimestamp(null);
         }
       }
+      setLoading(false);
+      return;
+    }
+
+    // Online fetch attempt
+    try {
+      const res = await getMyPassbook();
+      if (res.success && res.data) {
+        setTransactions(res.data.transactions);
+        setTotalInflow(res.data.totalPaid);
+        setTotalTransactionsCount(res.data.totalTransactions);
+        setIsOfflineMode(false);
+        setIsCachedData(false);
+        const now = new Date().toISOString();
+        setLastSyncTimestamp(now);
+
+        // Save to private offline cache
+        if (user?.organizationId && user?.id) {
+          OfflinePassbookCacheService.savePassbook(user.organizationId, user.id, res.data);
+        }
+      } else {
+        // Fallback to cache if request failed
+        if (user?.organizationId && user?.id) {
+          const cacheResult = OfflinePassbookCacheService.getPassbook(user.organizationId, user.id);
+          if (cacheResult.passbook) {
+            setTransactions(cacheResult.passbook.transactions);
+            setTotalInflow(cacheResult.passbook.totalPaid);
+            setTotalTransactionsCount(cacheResult.passbook.totalTransactions);
+            setIsCachedData(true);
+            setIsOfflineMode(true);
+            setLastSyncTimestamp(cacheResult.passbook.lastSyncTimestamp);
+            return;
+          }
+        }
+        setError(res.error || 'व्यवहार लोड करता आले नाहीत.');
+      }
     } catch {
-      setError('सर्व्हरशी संपर्क होऊ शकला नाही.');
+      // Network exception -> fallback to cache
+      if (user?.organizationId && user?.id) {
+        const cacheResult = OfflinePassbookCacheService.getPassbook(user.organizationId, user.id);
+        if (cacheResult.passbook) {
+          setTransactions(cacheResult.passbook.transactions);
+          setTotalInflow(cacheResult.passbook.totalPaid);
+          setTotalTransactionsCount(cacheResult.passbook.totalTransactions);
+          setIsCachedData(true);
+          setIsOfflineMode(true);
+          setLastSyncTimestamp(cacheResult.passbook.lastSyncTimestamp);
+          return;
+        }
+      }
+      setIsOfflineMode(true);
+      setError('सर्व्हरशी संपर्क होऊ शकला नाही आणि ऑफलाइन कॅश उपलब्ध नाही.');
     } finally {
       setLoading(false);
     }
-  }, [isOfficer]);
+  }, [isOfficer, user?.organizationId, user?.id]);
 
   useEffect(() => {
     fetchTransactions();
+
+    const handleOnline = () => {
+      setIsOfflineMode(false);
+      // Auto-refresh with authoritative server data upon reconnection
+      fetchTransactions();
+    };
+
+    const handleOffline = () => {
+      setIsOfflineMode(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [fetchTransactions]);
 
   // Filter by tab and search term
@@ -107,6 +218,23 @@ export const TransactionsView: React.FC = () => {
     }
   };
 
+  const formatSyncTime = (dateStr: string | null) => {
+    if (!dateStr) return 'उपलब्ध नाही';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('mr-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const getTransactionLabel = (type: string) => {
     switch (type) {
       case 'BISHI_PAYMENT':
@@ -134,7 +262,14 @@ export const TransactionsView: React.FC = () => {
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-800">व्यवहार</h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-800">व्यवहार</h3>
+                {isOfflineMode && (
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-full text-[9px] font-bold">
+                    🔴 ऑफलाइन
+                  </span>
+                )}
+              </div>
               <p className="text-[11px] text-slate-500">अधिकृत आर्थिक व्यवहार, जमा व पावत्या</p>
             </div>
           </div>
@@ -174,6 +309,28 @@ export const TransactionsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Offline Passbook Stale Notice Banner */}
+      {(isOfflineMode || isCachedData) && (
+        <div
+          role="status"
+          aria-label="ऑफलाइन पासबुक सूचना"
+          className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs space-y-1 shadow-xs"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold">
+              <WifiOff className="w-4 h-4 text-amber-600" />
+              <span>ऑफलाइन पासबुक मोड</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 bg-amber-200/90 text-amber-900 rounded-full font-bold">
+              🔴 ऑफलाइन
+            </span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            शेवटचे अद्यतन: <strong className="font-semibold">{formatSyncTime(lastSyncTimestamp)}</strong>. हे सेव्ह केलेले पासबुक आहे. इंटरनेट जोडणी झाल्यावर नवीन व्यवहार आपोआप अपडेट होतील.
+          </p>
+        </div>
+      )}
 
       {/* Search & Filter Toolbar */}
       <div className="bg-white rounded-2xl p-3 shadow-xs border border-slate-100 space-y-2.5">
@@ -246,10 +403,26 @@ export const TransactionsView: React.FC = () => {
         ) : filteredTransactions.length === 0 ? (
           <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200 space-y-2">
             <Wallet className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-xs font-semibold text-slate-700">सध्या कोणतेही व्यवहार उपलब्ध नाहीत.</p>
-            <p className="text-[11px] text-slate-400">
-              मंडळात अद्याप कोणतेही अधिकृत व्यवहार नोंदवलेले नाहीत.
+            <p className="text-xs font-semibold text-slate-700">
+              {isOfflineMode
+                ? 'कोणतीही सेव्ह केलेली पासबुक नोंद उपलब्ध नाही.'
+                : 'सध्या कोणतेही व्यवहार उपलब्ध नाहीत.'}
             </p>
+            <p className="text-[11px] text-slate-400">
+              {isOfflineMode
+                ? 'इंटरनेट कनेक्शन उपलब्ध नाही. प्रथमच पासबुक पाहण्यासाठी एकदा इंटरनेट सुरू करून ॲप उघडा.'
+                : 'मंडळात अद्याप कोणतेही अधिकृत व्यवहार नोंदवलेले नाहीत.'}
+            </p>
+            {isOfflineMode && (
+              <button
+                type="button"
+                onClick={fetchTransactions}
+                className="mt-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>पुन्हा तपासा</span>
+              </button>
+            )}
           </div>
         ) : (
           filteredTransactions.map((txn) => {

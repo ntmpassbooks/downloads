@@ -1,42 +1,37 @@
 import { apiRequest, ApiResponse } from './client.js';
 
-export type SupportedBank = 'SBI' | 'ICICI' | 'AXIS' | 'AU' | 'KOTAK';
-
-export interface BankOption {
-  code: SupportedBank;
-  name: string;
-  marathiName: string;
-  vpaSuffix: string;
-}
-
-export const SUPPORTED_BANKS: BankOption[] = [
-  { code: 'SBI', name: 'State Bank of India', marathiName: 'भारतीय स्टेट बँक (SBI)', vpaSuffix: '@sbi' },
-  { code: 'ICICI', name: 'ICICI Bank', marathiName: 'आयसीआयसीआय बँक (ICICI Bank)', vpaSuffix: '@icici' },
-  { code: 'AXIS', name: 'Axis Bank', marathiName: 'ॲक्सिस बँक (Axis Bank)', vpaSuffix: '@axisbank' },
-  { code: 'AU', name: 'AU Small Finance Bank', marathiName: 'एयू स्मॉल फायनान्स बँक (AU Bank)', vpaSuffix: '@aubank' },
-  { code: 'KOTAK', name: 'Kotak Mahindra Bank', marathiName: 'कोटक महिंद्रा बँक (Kotak Bank)', vpaSuffix: '@kotak' },
-];
-
-export type PaymentConfigStatus = 'NOT_CONFIGURED' | 'PENDING' | 'ACTIVE' | 'FAILED' | 'DISABLED';
-export type AccountType = 'CURRENT' | 'SAVINGS';
+export type PaymentOrderStatus =
+  | 'ONLINE_PENDING'
+  | 'ONLINE_CONFIRMED'
+  | 'ONLINE_REJECTED'
+  | 'CREATED'
+  | 'PENDING'
+  | 'SUCCESS'
+  | 'PAID'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'EXPIRED';
 
 export interface PaymentConfig {
   id: string;
   organizationId: string;
-  bank: SupportedBank;
-  provider: SupportedBank;
-  accountName: string;
-  accountType?: AccountType | null;
+  upiId?: string | null;
+  hasQrCode: boolean;
+  qrCodeData?: string | null;
+  isActive: boolean;
+  notes?: string | null;
+  // Legacy backward compatibility
+  bank?: string;
+  provider?: string;
+  accountName?: string;
+  accountType?: string | null;
   accountNumber?: string | null;
   maskedAccountNumber?: string | null;
   ifsc?: string | null;
   branch?: string | null;
-  upiId?: string | null;
   merchantId?: string | null;
-  hasCredentials: boolean;
-  status: PaymentConfigStatus;
-  isActive: boolean;
-  notes?: string | null;
+  hasCredentials?: boolean;
+  status?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,53 +40,71 @@ export interface PaymentOrder {
   id: string;
   organizationId: string;
   memberId: string;
+  memberName?: string;
+  memberPhone?: string;
   bishiRecordId: string;
+  bishiMonth?: string;
   amount: number;
   currency: string;
-  bank: SupportedBank;
-  provider: SupportedBank;
-  providerOrderId: string;
-  providerPaymentId?: string | null;
-  status: 'CREATED' | 'PENDING' | 'SUCCESS' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
+  status: PaymentOrderStatus;
   idempotencyKey: string;
   financialTransactionId?: string | null;
-  expiresAt: string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  // Legacy backward compatibility
+  bank?: string;
+  provider?: string;
+  providerOrderId?: string;
+  providerPaymentId?: string | null;
+  expiresAt?: string;
   completedAt?: string | null;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateOrderResponse {
   order: PaymentOrder;
-  providerKeyId: string;
+  upiId?: string | null;
+  hasQrCode?: boolean;
+  qrCodeData?: string | null;
   bishiMonth: string;
   memberName: string;
-  accountName: string;
-  bank: SupportedBank;
+  accountName?: string;
   upiIntentUrl?: string;
+  providerKeyId?: string;
+  bank?: string;
 }
 
 export interface OrderStatusResponse {
   orderId: string;
-  status: 'CREATED' | 'PENDING' | 'SUCCESS' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
+  status: PaymentOrderStatus;
   amount: number;
   currency: string;
-  providerPaymentId?: string | null;
+  rejectionReason?: string | null;
   financialTransactionId?: string | null;
-  expiresAt: string;
+  providerPaymentId?: string | null;
+  expiresAt?: string;
   completedAt?: string | null;
 }
 
 export interface UpsertPaymentConfigPayload {
-  bank: SupportedBank;
-  accountType: AccountType;
-  accountName: string;
+  upiId?: string;
+  qrCodeData?: string | null;
+  isActive?: boolean;
+  notes?: string;
+  // Legacy backward compatibility
+  bank?: string;
+  accountType?: string;
+  accountName?: string;
   accountNumber?: string;
   ifsc?: string;
   branch?: string;
-  upiId?: string;
   merchantId?: string;
   apiSecret?: string;
-  notes?: string;
 }
 
 // 1. Get payment configuration (President & Treasurer)
@@ -99,7 +112,7 @@ export async function getPaymentConfig(): Promise<ApiResponse<PaymentConfig | nu
   return apiRequest<PaymentConfig | null>('/api/payments/config');
 }
 
-// 2. Set/Update payment configuration (President)
+// 2. Set/Update payment configuration (President only)
 export async function upsertPaymentConfig(
   data: UpsertPaymentConfigPayload
 ): Promise<ApiResponse<PaymentConfig>> {
@@ -109,7 +122,7 @@ export async function upsertPaymentConfig(
   });
 }
 
-// 3. Update payment configuration status (President)
+// 3. Update payment configuration status (President only)
 export async function updatePaymentConfigStatus(
   status: 'NOT_CONFIGURED' | 'PENDING' | 'ACTIVE' | 'DISABLED'
 ): Promise<ApiResponse<PaymentConfig>> {
@@ -136,7 +149,7 @@ export async function getOrderStatus(
   return apiRequest<OrderStatusResponse>(`/api/payments/orders/${orderId}/status`);
 }
 
-// 6. Verify payment server-side (Member)
+// 6. Verify payment server-side (Legacy)
 export async function verifyPayment(data: {
   orderId: string;
   providerPaymentId: string;
@@ -155,8 +168,44 @@ export async function verifyPayment(data: {
   });
 }
 
-// 7. Get payment orders list (President & Treasurer all Mandal orders, Member own orders)
+// 7. Get payment orders list
 export async function getPaymentOrders(): Promise<ApiResponse<PaymentOrder[]>> {
   return apiRequest<PaymentOrder[]>('/api/payments/orders');
 }
+
+// 8. Get pending payment orders (President & Treasurer)
+export async function getPendingPaymentOrders(): Promise<ApiResponse<PaymentOrder[]>> {
+  return apiRequest<PaymentOrder[]>('/api/payments/orders/pending');
+}
+
+// 9. Approve online payment order (President & Treasurer)
+export async function approvePaymentOrder(
+  orderId: string
+): Promise<ApiResponse<{
+  success: boolean;
+  message: string;
+  order: PaymentOrder;
+  financialTransactionId: string;
+  receiptNumber: string;
+}>> {
+  return apiRequest(`/api/payments/orders/${orderId}/approve`, {
+    method: 'POST',
+  });
+}
+
+// 10. Reject online payment order (President & Treasurer)
+export async function rejectPaymentOrder(
+  orderId: string,
+  reason: string
+): Promise<ApiResponse<{
+  success: boolean;
+  message: string;
+  order: PaymentOrder;
+}>> {
+  return apiRequest(`/api/payments/orders/${orderId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
 

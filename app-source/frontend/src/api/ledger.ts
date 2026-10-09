@@ -11,7 +11,7 @@ export interface FinancialTransaction {
   referenceId: string;
   transactionNumber: string;
   amount: number;
-  paymentMethod: 'CASH';
+  paymentMethod: 'CASH' | 'ONLINE';
   transactionDate: string;
   status: 'CONFIRMED' | 'CANCELLED';
   notes: string | null;
@@ -103,7 +103,7 @@ export interface TransactionReceipt {
   };
   bishiMonth: string | null;
   amount: number;
-  paymentMethod: 'CASH';
+  paymentMethod: 'CASH' | 'ONLINE';
   transactionDate: string;
   recordedBy: {
     id: string;

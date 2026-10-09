@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
   reference_id TEXT NOT NULL,
   transaction_number TEXT UNIQUE NOT NULL,
   amount INTEGER NOT NULL CHECK (amount > 0),
-  payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH', 'ONLINE_UPI')) DEFAULT 'CASH',
+  payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH', 'ONLINE', 'ONLINE_UPI')) DEFAULT 'CASH',
   transaction_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status TEXT NOT NULL CHECK(status IN ('CONFIRMED', 'CANCELLED')) DEFAULT 'CONFIRMED',
   notes TEXT,
@@ -138,11 +138,18 @@ CREATE TABLE IF NOT EXISTS loans (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL,
   member_id TEXT NOT NULL,
-  actor_id TEXT NOT NULL, -- President who authorized the loan
+  actor_id TEXT NOT NULL, -- President or Treasurer who authorized the loan
   amount INTEGER NOT NULL CHECK (amount > 0), -- Principal loan amount
   loan_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'CLOSED', 'CANCELLED')) DEFAULT 'ACTIVE',
   interest_rate REAL NOT NULL DEFAULT 0.0,
+  interest_type TEXT NOT NULL CHECK(interest_type IN ('FLAT', 'REDUCING_BALANCE')) DEFAULT 'FLAT',
+  rate_period TEXT NOT NULL CHECK(rate_period IN ('MONTHLY', 'ANNUAL')) DEFAULT 'ANNUAL',
+  tenure_months INTEGER NOT NULL DEFAULT 1 CHECK(tenure_months >= 1),
+  monthly_installment INTEGER NOT NULL DEFAULT 0,
+  total_interest INTEGER NOT NULL DEFAULT 0,
+  total_payable INTEGER NOT NULL DEFAULT 0,
+  first_due_date TEXT,
   notes TEXT,
   disbursement_transaction_id TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -156,15 +163,41 @@ CREATE INDEX IF NOT EXISTS idx_loans_org ON loans(organization_id);
 CREATE INDEX IF NOT EXISTS idx_loans_member ON loans(member_id);
 CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
 
--- Loan Repayments (कर्ज रोख परतफेड नोंदी)
+-- Loan Installments (हप्ते वेळापत्रक व हप्ता स्थिती)
+CREATE TABLE IF NOT EXISTS loan_installments (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  loan_id TEXT NOT NULL,
+  installment_number INTEGER NOT NULL,
+  due_date TEXT NOT NULL,
+  principal_amount INTEGER NOT NULL,
+  interest_amount INTEGER NOT NULL,
+  total_amount INTEGER NOT NULL,
+  paid_amount INTEGER NOT NULL DEFAULT 0,
+  paid_date DATETIME,
+  status TEXT NOT NULL CHECK(status IN ('UPCOMING', 'DUE', 'PARTIALLY_PAID', 'PAID', 'OVERDUE')) DEFAULT 'UPCOMING',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+  UNIQUE(loan_id, installment_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_loan_installments_org ON loan_installments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_loan_installments_loan ON loan_installments(loan_id);
+CREATE INDEX IF NOT EXISTS idx_loan_installments_status ON loan_installments(status);
+
+-- Loan Repayments (कर्ज परतफेड नोंदी - रोख व ऑनलाइन)
 CREATE TABLE IF NOT EXISTS loan_repayments (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL,
   loan_id TEXT NOT NULL,
   member_id TEXT NOT NULL,
-  actor_id TEXT NOT NULL, -- Officer who collected cash (Treasurer / President)
+  actor_id TEXT NOT NULL, -- Officer who collected/approved payment
   amount INTEGER NOT NULL CHECK (amount > 0),
-  payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH')) DEFAULT 'CASH',
+  principal_paid INTEGER NOT NULL DEFAULT 0,
+  interest_paid INTEGER NOT NULL DEFAULT 0,
+  payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH', 'ONLINE')) DEFAULT 'CASH',
   repayment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   transaction_id TEXT UNIQUE, -- Link to financial_transactions(id)
   notes TEXT,
@@ -204,25 +237,26 @@ CREATE INDEX IF NOT EXISTS idx_expenses_org_category ON expenses(organization_id
 CREATE INDEX IF NOT EXISTS idx_expenses_txn ON expenses(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_actor ON expenses(actor_id);
 
--- Payment Configurations (मंडळ ऑनलाइन पेमेंट खाते रचना - बहु-बँक अध्यक्ष नियंत्रण)
+-- Payment Configurations (मंडळ ऑनलाइन पेमेंट रचना - अध्यक्ष नियंत्रण: UPI ID व QR Code)
 CREATE TABLE IF NOT EXISTS payment_configs (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL UNIQUE,
-  bank TEXT NOT NULL CHECK(bank IN ('SBI', 'ICICI', 'AXIS', 'AU', 'KOTAK', 'MOCK')),
-  provider TEXT NOT NULL CHECK(provider IN ('SBI', 'ICICI', 'AXIS', 'AU', 'KOTAK', 'MOCK')),
-  account_name TEXT NOT NULL,
-  account_type TEXT CHECK(account_type IN ('CURRENT', 'SAVINGS')),
+  upi_id TEXT,
+  qr_code_data TEXT,
+  is_active INTEGER NOT NULL DEFAULT 0 CHECK(is_active IN (0, 1)),
+  notes TEXT,
+  bank TEXT,
+  provider TEXT,
+  account_name TEXT,
+  account_type TEXT,
   account_number TEXT,
   ifsc TEXT,
   branch TEXT,
-  upi_id TEXT,
   merchant_id TEXT,
   credentials_encrypted TEXT,
   credentials_iv TEXT,
   credentials_tag TEXT,
-  status TEXT NOT NULL CHECK(status IN ('NOT_CONFIGURED', 'PENDING', 'ACTIVE', 'FAILED', 'DISABLED')) DEFAULT 'PENDING',
-  is_active INTEGER NOT NULL DEFAULT 0 CHECK(is_active IN (0, 1)),
-  notes TEXT,
+  status TEXT DEFAULT 'PENDING',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
@@ -230,35 +264,46 @@ CREATE TABLE IF NOT EXISTS payment_configs (
 
 CREATE INDEX IF NOT EXISTS idx_payment_configs_org ON payment_configs(organization_id);
 
--- Payment Orders (ऑनलाइन पेमेंट ऑर्डर्स व सर्व्हर-साइड पडताळणी)
+-- Payment Orders (ऑनलाइन बिशी भरणा व कर्ज परतफेड नोंदी - अध्यक्ष/खजिनदार प्रत्यक्ष पडताळणी)
 CREATE TABLE IF NOT EXISTS payment_orders (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL,
   member_id TEXT NOT NULL,
-  bishi_record_id TEXT NOT NULL,
+  payment_type TEXT NOT NULL CHECK(payment_type IN ('BISHI', 'LOAN_REPAYMENT')) DEFAULT 'BISHI',
+  bishi_record_id TEXT,
+  loan_id TEXT,
   amount INTEGER NOT NULL CHECK (amount > 0),
   currency TEXT NOT NULL DEFAULT 'INR',
-  bank TEXT NOT NULL DEFAULT 'SBI',
-  provider TEXT NOT NULL DEFAULT 'SBI',
-  provider_order_id TEXT UNIQUE NOT NULL,
+  bank TEXT,
+  provider TEXT,
+  provider_order_id TEXT,
   provider_payment_id TEXT,
-  status TEXT NOT NULL CHECK(status IN ('CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED')) DEFAULT 'CREATED',
+  status TEXT NOT NULL CHECK(status IN ('ONLINE_PENDING', 'ONLINE_CONFIRMED', 'ONLINE_REJECTED', 'CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED')) DEFAULT 'ONLINE_PENDING',
   idempotency_key TEXT UNIQUE NOT NULL,
   financial_transaction_id TEXT UNIQUE,
-  expires_at DATETIME NOT NULL,
+  approved_by TEXT,
+  approved_at DATETIME,
+  rejected_by TEXT,
+  rejected_at DATETIME,
+  rejection_reason TEXT,
+  notes TEXT,
+  expires_at DATETIME,
   completed_at DATETIME,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (bishi_record_id) REFERENCES bishi_records(id) ON DELETE CASCADE,
-  FOREIGN KEY (financial_transaction_id) REFERENCES financial_transactions(id) ON DELETE SET NULL
+  FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+  FOREIGN KEY (financial_transaction_id) REFERENCES financial_transactions(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (rejected_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_payment_orders_org ON payment_orders(organization_id);
 CREATE INDEX IF NOT EXISTS idx_payment_orders_member ON payment_orders(member_id);
 CREATE INDEX IF NOT EXISTS idx_payment_orders_bishi ON payment_orders(bishi_record_id);
-CREATE INDEX IF NOT EXISTS idx_payment_orders_provider_order ON payment_orders(provider_order_id);
+CREATE INDEX IF NOT EXISTS idx_payment_orders_loan ON payment_orders(loan_id);
 
 -- Notifications (सूचना व्यवस्थापन - बहु-भाडेकरू व भूमिका-आधारित)
 CREATE TABLE IF NOT EXISTS notifications (

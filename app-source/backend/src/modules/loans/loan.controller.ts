@@ -1,6 +1,22 @@
 import { Request, Response } from 'express';
 import { LoanService } from './loan.service.js';
-import { CreateLoanInput, RecordLoanRepaymentInput } from './loan.validation.js';
+import {
+  CreateLoanInput,
+  RecordLoanRepaymentInput,
+  CalculateLoanPreviewInput,
+} from './loan.validation.js';
+
+export function calculateLoanPreviewHandler(
+  req: Request<{}, {}, CalculateLoanPreviewInput>,
+  res: Response
+): void {
+  const result = LoanService.calculatePreview(req.body);
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+}
 
 export function createLoanHandler(
   req: Request<{}, {}, CreateLoanInput>,
@@ -40,6 +56,21 @@ export function recordCashLoanRepaymentHandler(
     success: true,
     message: 'कर्ज परतफेड रोख रक्कम यशस्वीरीत्या नोंदवली गेली (Cash loan repayment recorded successfully)',
     data: result,
+  });
+}
+
+export function getLoanInstallmentsHandler(
+  req: Request<{ loanId: string }>,
+  res: Response
+): void {
+  const actor = req.user!;
+  const { loanId } = req.params;
+
+  const installments = LoanService.getLoanInstallments(actor.organizationId, loanId, actor);
+
+  res.status(200).json({
+    success: true,
+    data: installments,
   });
 }
 

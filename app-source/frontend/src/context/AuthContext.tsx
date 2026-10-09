@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { apiRequest } from '../api/client.js';
 import { FirebaseAuthService } from '../services/firebaseAuth.service.js';
+import { OfflinePassbookCacheService } from '../services/offlinePassbookCache.service.js';
 
 export type Role = 'PRESIDENT' | 'TREASURER' | 'MEMBER';
 
@@ -53,13 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [initError, setInitError] = useState<string | null>(null);
 
-  // Validate session and server connectivity on app initialization with minimum 6-second splash
+  // Validate session and server connectivity on app initialization with minimum 10-second splash
   const checkAuth = React.useCallback(async () => {
     setIsLoading(true);
     setInitError(null);
 
     const startTime = Date.now();
-    const MIN_SPLASH_DURATION_MS = 6000;
+    const MIN_SPLASH_DURATION_MS = 10000;
 
     const waitForMinDuration = async () => {
       const elapsed = Date.now() - startTime;
@@ -93,6 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(res.user);
           setOrganization(res.organization);
           setToken(activeToken);
+          localStorage.setItem('ntm_user', JSON.stringify(res.user));
+          localStorage.setItem('ntm_org', JSON.stringify(res.organization));
           setInitError(null);
           setIsLoading(false);
 
@@ -104,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else if (res.status === 401) {
           // Token expired or invalid: reset credentials and transition to login
+          OfflinePassbookCacheService.clearAllPassbookCaches();
           setUser(null);
           setOrganization(null);
           setToken(null);
@@ -114,12 +120,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setInitError(null);
           setIsLoading(false);
         } else {
-          // Network or server connectivity issue
+          // Network or server connectivity issue: try offline session restoration
+          const cachedUserStr = localStorage.getItem('ntm_user');
+          const cachedOrgStr = localStorage.getItem('ntm_org');
+          if (cachedUserStr && cachedOrgStr) {
+            try {
+              const cachedUser = JSON.parse(cachedUserStr);
+              const cachedOrg = JSON.parse(cachedOrgStr);
+              if (cachedUser?.id && cachedOrg?.id) {
+                setUser(cachedUser);
+                setOrganization(cachedOrg);
+                setToken(activeToken);
+                setInitError(null);
+                setIsLoading(false);
+                return;
+              }
+            } catch {
+              // Fall through to error
+            }
+          }
           setInitError(res.error || 'सर्व्हर सध्या उपलब्ध नाही. कृपया काही वेळाने पुन्हा प्रयत्न करा.');
           setIsLoading(false);
         }
       } catch {
         await waitForMinDuration();
+        const cachedUserStr = localStorage.getItem('ntm_user');
+        const cachedOrgStr = localStorage.getItem('ntm_org');
+        if (cachedUserStr && cachedOrgStr) {
+          try {
+            const cachedUser = JSON.parse(cachedUserStr);
+            const cachedOrg = JSON.parse(cachedOrgStr);
+            if (cachedUser?.id && cachedOrg?.id) {
+              setUser(cachedUser);
+              setOrganization(cachedOrg);
+              setToken(activeToken);
+              setInitError(null);
+              setIsLoading(false);
+              return;
+            }
+          } catch {
+            // Fall through to error
+          }
+        }
         setInitError('सर्व्हर सध्या उपलब्ध नाही. कृपया काही वेळाने पुन्हा प्रयत्न करा.');
         setIsLoading(false);
       }
@@ -157,6 +199,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     checkAuth();
+
+    let appStateHandle: any = null;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('appStateChange', (state) => {
+        if (state.isActive) {
+          checkAuth();
+        }
+      }).then((handle) => {
+        appStateHandle = handle;
+      }).catch(() => {});
+    }
+
+    return () => {
+      if (appStateHandle && typeof appStateHandle.remove === 'function') {
+        appStateHandle.remove();
+      }
+    };
   }, [checkAuth]);
 
   const retryInit = () => {
@@ -175,6 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         sessionStorage.setItem('ntm_token', res.token);
       }
+      localStorage.setItem('ntm_user', JSON.stringify(res.user));
+      localStorage.setItem('ntm_org', JSON.stringify(res.organization));
       setToken(res.token);
       setUser(res.user);
       setOrganization(res.organization);
@@ -208,6 +269,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       sessionStorage.setItem('ntm_token', newToken);
     }
+    localStorage.setItem('ntm_user', JSON.stringify(newUser));
+    localStorage.setItem('ntm_org', JSON.stringify(newOrg));
     setToken(newToken);
     setUser(newUser);
     setOrganization(newOrg);
@@ -234,6 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Safe non-blocking degradation
     }
 
+    OfflinePassbookCacheService.clearAllPassbookCaches();
     localStorage.removeItem('ntm_token');
     sessionStorage.removeItem('ntm_token');
     localStorage.removeItem('ntm_user');
@@ -241,6 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setUser(null);
     setOrganization(null);
+    await checkAuth();
   };
 
   const updateToken = (newToken: string, updatedUser?: User) => {

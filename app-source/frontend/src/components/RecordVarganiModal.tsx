@@ -171,7 +171,7 @@ export const RecordVarganiModal: React.FC<RecordVarganiModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-[calc(100vw-24px)] sm:max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-[calc(100vw-24px)] sm:max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 sm:px-5 sm:py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">

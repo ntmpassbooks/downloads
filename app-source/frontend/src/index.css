@@ -5,15 +5,22 @@
 @layer base {
   html, body {
     height: 100%;
+    min-height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
     touch-action: manipulation;
+    background-color: #f8fafc;
   }
 
   #root {
+    height: 100%;
     min-height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
     overflow-x: hidden;
   }
 }
@@ -124,5 +131,70 @@
 .animate-ntm-status {
   animation: ntmFadeSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.95s forwards;
   opacity: 0;
+}
+
+/* ============================================================
+   SECTION 25: OFFICIAL RECEIPT PRINTING STYLES (A4, NO APP UI)
+   ============================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide entire application shell and background navigation */
+  #root > *:not([role="dialog"]),
+  nav,
+  header,
+  .no-print,
+  button {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Make receipt modal and printable container clean and unconstrained */
+  [role="dialog"] {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  [role="dialog"] > div {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #printable-receipt {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 10mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #059669 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }
 

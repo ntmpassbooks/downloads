@@ -14,8 +14,10 @@ import {
   generateBishiCycle,
   getBishiOverview,
   getMemberBishiConfig,
+  getMemberBishiRecords,
   BishiOverviewSummary,
   BishiConfig,
+  BishiRecord,
 } from '../api/bishi.js';
 import {
   getOrganizationLedger,
@@ -65,6 +67,7 @@ export const DashboardPage: React.FC = () => {
   } | null>(null);
   const [myPassbookSummary, setMyPassbookSummary] = useState<{ totalPaid: number; totalTransactions: number } | null>(null);
   const [myBishiConfig, setMyBishiConfig] = useState<BishiConfig | null>(null);
+  const [myBishiRecords, setMyBishiRecords] = useState<BishiRecord[]>([]);
 
   // Mandal Expenses state (President & Treasurer)
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -113,9 +116,10 @@ export const DashboardPage: React.FC = () => {
       fetchExpenses(selectedExpenseCategory);
     } else if (user?.role === 'MEMBER' && user?.id) {
       try {
-        const [passbookRes, bishiRes] = await Promise.all([
+        const [passbookRes, bishiRes, recordsRes] = await Promise.all([
           getMyPassbook(),
           getMemberBishiConfig(user.id),
+          getMemberBishiRecords(user.id),
         ]);
         if (passbookRes.success && passbookRes.data) {
           setMyPassbookSummary({
@@ -125,6 +129,9 @@ export const DashboardPage: React.FC = () => {
         }
         if (bishiRes.success && bishiRes.data) {
           setMyBishiConfig(bishiRes.data);
+        }
+        if (recordsRes.success && recordsRes.data) {
+          setMyBishiRecords(recordsRes.data);
         }
       } catch {
         // Safe fail
@@ -643,22 +650,46 @@ export const DashboardPage: React.FC = () => {
                       मंडळाचे अध्यक्ष जेव्हा तुमची बीसी रक्कम निश्चित करतील, तेव्हा ती येथे दिसेल.
                     </p>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                      <span className="text-[10px] text-slate-400 block font-medium">मासिक हप्ता</span>
-                      <strong className="text-sm font-bold text-slate-800 font-mono">
-                        ₹{myBishiConfig.monthlyAmount}
-                      </strong>
+                ) : (() => {
+                  const currentMonthStr = new Date().toISOString().slice(0, 7);
+                  const overdueRecs = myBishiRecords.filter(
+                    (r) => r.status !== 'PAID' && (r.monthYear < currentMonthStr || r.status === 'OVERDUE')
+                  );
+                  const overdueAmt = overdueRecs.reduce((sum, r) => sum + r.expectedAmount, 0);
+                  const currentMonthRec = myBishiRecords.find((r) => r.monthYear === currentMonthStr);
+                  const currentDueAmt =
+                    currentMonthRec && currentMonthRec.status !== 'PAID' ? currentMonthRec.expectedAmount : 0;
+                  const totalDueAmt = overdueAmt + currentDueAmt;
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2 text-xs text-center">
+                        <div className="p-2.5 bg-amber-50 border border-amber-200/80 rounded-xl">
+                          <span className="text-[10px] text-amber-800 block font-bold">थकीत बिशी</span>
+                          <strong className="text-sm font-bold text-amber-900 font-mono">
+                            ₹{overdueAmt}
+                          </strong>
+                        </div>
+                        <div className="p-2.5 bg-blue-50 border border-blue-200/80 rounded-xl">
+                          <span className="text-[10px] text-blue-800 block font-bold">चालू बिशी</span>
+                          <strong className="text-sm font-bold text-blue-900 font-mono">
+                            ₹{currentDueAmt}
+                          </strong>
+                        </div>
+                        <div className="p-2.5 bg-orange-50 border border-orange-200/80 rounded-xl">
+                          <span className="text-[10px] text-orange-800 block font-bold">एकूण देय</span>
+                          <strong className="text-sm font-bold text-orange-900 font-mono">
+                            ₹{totalDueAmt}
+                          </strong>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                        <span>मासिक हप्ता: <strong className="text-slate-700 font-mono">₹{myBishiConfig.monthlyAmount}</strong></span>
+                        <span>देय: <strong className="text-slate-700 font-medium">दर महिन्याची {myBishiConfig.dueDay} तारीख</strong></span>
+                      </div>
                     </div>
-                    <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                      <span className="text-[10px] text-slate-400 block font-medium">देय दिनांक</span>
-                      <strong className="text-sm font-bold text-slate-800 font-mono">
-                        दर महिन्याची {myBishiConfig.dueDay} तारीख
-                      </strong>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 

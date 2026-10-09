@@ -625,8 +625,8 @@ export const ProfileView: React.FC = () => {
           </button>
         )}
 
-        {/* President Payment Settings Button */}
-        {user?.role === 'PRESIDENT' && (
+        {/* Payment Settings / View Button (President edit, Treasurer read-only) */}
+        {(user?.role === 'PRESIDENT' || user?.role === 'TREASURER') && (
           <button
             id="payment-settings-section"
             type="button"
@@ -638,9 +638,15 @@ export const ProfileView: React.FC = () => {
                 <CreditCard className="w-4 h-4" />
               </div>
               <div className="text-left">
-                <div className="font-bold">ऑनलाइन भरणा रचना (Online Payment Settings)</div>
+                <div className="font-bold">
+                  {user.role === 'PRESIDENT'
+                    ? 'ऑनलाइन भरणा रचना (Online Payment Settings)'
+                    : 'ऑनलाइन भरणा माहिती (Online Payment Info)'}
+                </div>
                 <div className="text-[10px] text-orange-800 font-normal">
-                  UPI खाते व डिजिटल भरणा स्थिती नियंत्रित करा
+                  {user.role === 'PRESIDENT'
+                    ? 'UPI आयडी व QR कोड व्यवस्थापन'
+                    : 'मंडळाचा UPI आयडी व QR कोड पहा'}
                 </div>
               </div>
             </div>
@@ -736,11 +742,12 @@ export const ProfileView: React.FC = () => {
         />
       )}
 
-      {/* President Payment Settings Modal */}
-      {user?.role === 'PRESIDENT' && (
+      {/* Payment Settings Modal (President edit, Treasurer read-only) */}
+      {(user?.role === 'PRESIDENT' || user?.role === 'TREASURER') && (
         <PaymentSettingsModal
           isOpen={isPaymentSettingsOpen}
           onClose={() => setIsPaymentSettingsOpen(false)}
+          isReadOnly={user.role === 'TREASURER'}
         />
       )}
     </div>

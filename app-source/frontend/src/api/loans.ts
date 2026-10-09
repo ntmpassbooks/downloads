@@ -8,12 +8,28 @@ export interface LoanRepayment {
   actorId: string;
   actorName?: string;
   amount: number;
-  paymentMethod: 'CASH';
+  principalPaid?: number;
+  interestPaid?: number;
+  paymentMethod: 'CASH' | 'ONLINE';
   repaymentDate: string;
   transactionId: string | null;
   transactionNumber?: string;
   notes: string | null;
   createdAt: string;
+}
+
+export interface LoanInstallment {
+  id: string;
+  organizationId: string;
+  loanId: string;
+  installmentNumber: number;
+  dueDate: string;
+  principalAmount: number;
+  interestAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'UPCOMING' | 'DUE' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+  paidAt?: string | null;
 }
 
 export interface Loan {
@@ -28,6 +44,13 @@ export interface Loan {
   loanDate: string;
   status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
   interestRate: number;
+  interestType?: 'FLAT' | 'REDUCING_BALANCE';
+  ratePeriod?: 'MONTHLY' | 'ANNUAL';
+  tenureMonths?: number;
+  monthlyInstallment?: number;
+  totalInterest?: number;
+  totalPayable?: number;
+  firstDueDate?: string | null;
   notes: string | null;
   disbursementTransactionId: string | null;
   disbursementTransactionNumber?: string;
@@ -36,11 +59,17 @@ export interface Loan {
   createdAt: string;
   updatedAt: string;
   repayments?: LoanRepayment[];
+  installments?: LoanInstallment[];
 }
 
 export interface CreateLoanInput {
   memberId: string;
   amount: number;
+  interestRate?: number;
+  interestType?: 'FLAT' | 'REDUCING_BALANCE';
+  ratePeriod?: 'MONTHLY' | 'ANNUAL';
+  tenureMonths?: number;
+  firstDueDate?: string;
   loanDate?: string;
   notes?: string;
 }
@@ -63,6 +92,35 @@ export interface RecordLoanRepaymentResponse {
   };
 }
 
+export interface CalculateLoanPreviewInput {
+  principal: number;
+  interestRate: number;
+  interestType: 'FLAT' | 'REDUCING_BALANCE';
+  ratePeriod: 'MONTHLY' | 'ANNUAL';
+  tenureMonths: number;
+  firstDueDate?: string;
+}
+
+export interface LoanSchedulePreview {
+  principal: number;
+  interestRate: number;
+  interestType: 'FLAT' | 'REDUCING_BALANCE';
+  ratePeriod: 'MONTHLY' | 'ANNUAL';
+  tenureMonths: number;
+  monthlyInstallment: number;
+  totalInterest: number;
+  totalPayable: number;
+  firstDueDate: string;
+  installments: Array<{
+    installmentNumber: number;
+    dueDate: string;
+    principalAmount: number;
+    interestAmount: number;
+    totalAmount: number;
+    remainingPrincipal: number;
+  }>;
+}
+
 /**
  * President creates and disburses a real loan.
  */
@@ -70,6 +128,48 @@ export async function createLoan(input: CreateLoanInput): Promise<ApiResponse<Lo
   return apiRequest('/loans', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Calculate loan preview schedule and EMI terms in real-time.
+ */
+export async function calculateLoanPreview(
+  input: CalculateLoanPreviewInput
+): Promise<ApiResponse<LoanSchedulePreview>> {
+  return apiRequest('/loans/calculate-preview', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Fetch installment schedule for a loan.
+ */
+export async function getLoanInstallments(loanId: string): Promise<ApiResponse<LoanInstallment[]>> {
+  return apiRequest(`/loans/${loanId}/installments`);
+}
+
+/**
+ * Member initiates online loan repayment notice [मी पेमेंट केले].
+ */
+export async function initiateOnlineLoanRepayment(
+  loanId: string,
+  amount: number
+): Promise<ApiResponse<{
+  order: any;
+  providerKeyId: string;
+  memberName: string;
+  accountName: string;
+  bank: string;
+  upiIntentUrl?: string;
+  upiId?: string | null;
+  hasQrCode?: boolean;
+  qrCodeData?: string | null;
+}>> {
+  return apiRequest(`/loans/${loanId}/pay-online`, {
+    method: 'POST',
+    body: JSON.stringify({ amount }),
   });
 }
 

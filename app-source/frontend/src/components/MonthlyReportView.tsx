@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   getMonthlyStatement,
-  downloadAuditCsv,
+  downloadMonthlyStatement,
   MonthlyStatementData,
 } from '../api/reporting.js';
 import {
   Calendar,
   Download,
   FileSpreadsheet,
+  FileText,
   AlertCircle,
   Loader2,
   Receipt,
@@ -23,7 +24,6 @@ export const MonthlyReportView: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthYear);
   const [statement, setStatement] = useState<MonthlyStatementData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadFeedback, setDownloadFeedback] = useState<string | null>(null);
 
@@ -72,18 +72,21 @@ export const MonthlyReportView: React.FC = () => {
     fetchStatement(selectedMonth);
   }, [selectedMonth, fetchStatement]);
 
-  const handleDownloadCsv = async () => {
-    setDownloading(true);
+  const [downloadingFormat, setDownloadingFormat] = useState<'pdf' | 'excel' | 'csv' | null>(null);
+
+  const handleDownload = async (format: 'pdf' | 'excel' | 'csv') => {
+    setDownloadingFormat(format);
     setDownloadFeedback(null);
-    const res = await downloadAuditCsv(selectedMonth);
+    const res = await downloadMonthlyStatement(selectedMonth, format);
     if (res.success) {
-      setDownloadFeedback('ऑडिट CSV फाईल यशस्वीरीत्या डाऊनलोड झाली!');
+      const formatName = format === 'pdf' ? 'PDF' : format === 'excel' ? 'Excel' : 'CSV';
+      setDownloadFeedback(`${formatName} विवरण फाईल यशस्वीरीत्या डाऊनलोड झाली!`);
       setTimeout(() => setDownloadFeedback(null), 4000);
     } else {
       setDownloadFeedback(res.error || 'डाऊनलोड अयशस्वी');
       setTimeout(() => setDownloadFeedback(null), 4000);
     }
-    setDownloading(false);
+    setDownloadingFormat(null);
   };
 
   return (
@@ -135,8 +138,8 @@ export const MonthlyReportView: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+          <div className="space-y-2">
+            <div className="relative">
               <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="month"
@@ -148,18 +151,52 @@ export const MonthlyReportView: React.FC = () => {
               />
             </div>
 
-            <button
-              onClick={handleDownloadCsv}
-              disabled={downloading}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-xs shrink-0 disabled:opacity-50"
-            >
-              {downloading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-              ) : (
-                <Download className="w-4 h-4 text-orange-400" />
-              )}
-              <span>CSV एक्सपोर्ट</span>
-            </button>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleDownload('pdf')}
+                disabled={downloadingFormat !== null}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 min-h-[42px] cursor-pointer"
+                title="प्रिंटेबल A4 PDF अहवाल डाऊनलोड करा"
+              >
+                {downloadingFormat === 'pdf' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 text-white" />
+                )}
+                <span>📄 PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownload('excel')}
+                disabled={downloadingFormat !== null}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 min-h-[42px] cursor-pointer"
+                title="अधिकृत Excel (.xlsx) स्प्रेडशीट डाऊनलोड करा"
+              >
+                {downloadingFormat === 'excel' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+                )}
+                <span>📊 Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownload('csv')}
+                disabled={downloadingFormat !== null}
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 min-h-[42px] cursor-pointer"
+                title="RFC 4180 CSV डेटा डाऊनलोड करा"
+              >
+                {downloadingFormat === 'csv' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-orange-400" />
+                )}
+                <span>📑 CSV</span>
+              </button>
+            </div>
           </div>
         </div>
 

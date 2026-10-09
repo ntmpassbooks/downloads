@@ -85,7 +85,14 @@ export const LoginPage: React.FC = () => {
       {/* App & Login Branding Header */}
       <div className="flex flex-col items-center text-center mt-3">
         <img
-          src="/NTM_Passbook_Logo.png"
+          src="./NTM_Passbook_Logo.png"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.dataset.tried) {
+              target.dataset.tried = 'true';
+              target.src = '/NTM_Passbook_Logo.png';
+            }
+          }}
           alt="NTM Passbook"
           className="w-16 h-auto max-h-16 object-contain rounded-2xl mb-3 drop-shadow-md"
         />

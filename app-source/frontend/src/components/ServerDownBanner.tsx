@@ -23,31 +23,43 @@ export const ServerDownBanner: React.FC<ServerDownBannerProps> = ({ onRetrySucce
 
   return (
     <div
-      role="alert"
-      aria-live="assertive"
-      className="bg-amber-600 text-white px-3.5 py-2.5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm font-medium transition-all duration-200 z-50 shrink-0 border-b border-amber-700/50"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="server-down-title"
+      aria-describedby="server-down-desc"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
     >
-      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-        <div className="w-6 h-6 rounded-full bg-amber-700/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-          <WifiOff className="w-3.5 h-3.5 text-amber-100 animate-pulse" />
+      <div className="relative w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-amber-300 dark:border-amber-700/60 p-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-200 my-auto">
+        {/* Warning Icon Badge */}
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center mb-4 shadow-inner text-amber-600 dark:text-amber-400">
+          <WifiOff className="w-8 h-8 animate-pulse" />
         </div>
-        <div className="min-w-0">
-          <span className="font-bold block sm:inline">सर्व्हर सध्या उपलब्ध नाही.</span>
-          <span className="text-[11px] sm:text-xs text-amber-100 sm:ml-2 block sm:inline">
-            कृपया काही वेळाने पुन्हा प्रयत्न करा.
-          </span>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-end shrink-0 pt-1 sm:pt-0">
+        {/* Title */}
+        <h3
+          id="server-down-title"
+          className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight mb-2"
+        >
+          सर्व्हर सध्या उपलब्ध नाही.
+        </h3>
+
+        {/* Message */}
+        <p
+          id="server-down-desc"
+          className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed"
+        >
+          कृपया काही वेळाने पुन्हा प्रयत्न करा.
+        </p>
+
+        {/* Retry Button */}
         <button
           onClick={handleRetry}
           disabled={isChecking}
           type="button"
           aria-label="पुन्हा प्रयत्न करा"
-          className="bg-amber-700 hover:bg-amber-800 active:scale-95 disabled:opacity-60 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-all"
+          className="w-full py-3 px-5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 active:scale-98 disabled:opacity-60 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer min-h-[44px]"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
           <span>{isChecking ? 'तपासत आहे...' : 'पुन्हा प्रयत्न करा'}</span>
         </button>
       </div>

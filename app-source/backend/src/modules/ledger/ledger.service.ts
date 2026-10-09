@@ -130,7 +130,7 @@ export class LedgerService {
     }
 
     // 2. Verify target Bishi record exists and belongs to this mandal
-    const record = db
+    const targetRecord = db
       .prepare(`
         SELECT r.*, u.full_name as member_name, u.phone as member_phone, u.is_active as member_active
         FROM bishi_records r
@@ -139,18 +139,59 @@ export class LedgerService {
       `)
       .get(bishiRecordId, orgId) as any;
 
-    if (!record) {
+    if (!targetRecord) {
       throw new AppError('मासिक बीसी नोंद सापडली नाही (Bishi record not found in this mandal)', 404);
     }
 
-    if (record.status === 'PAID') {
-      throw new AppError('हा बीसी हप्ता आधीच भरला गेला आहे (This Bishi record is already paid)', 409);
+    // Self-recording safeguard: Cross-officer confirmation required!
+    if (targetRecord.member_id === actor.id) {
+      throw new AppError(
+        'अधिकारी स्वतःचा रोख भरणा स्वतः नोंदवू शकत नाही. दुसऱ्या अधिकाऱ्याची (अध्यक्ष/खजिनदार) नोंद आवश्यक आहे. (Self-recording not allowed: cross-officer confirmation required)',
+        403
+      );
     }
 
-    // 3. Exact amount validation: must match expected snapshot amount
-    if (amount !== record.expected_amount) {
+    if (targetRecord.status === 'PAID') {
+      throw new AppError('हा बीसी हप्ता आधीच भरला गेला आहे (This Bishi installment is already paid)', 409);
+    }
+
+    // 3. Determine records to settle: Single-month or Multi-month allocation
+    const recordsToSettle: any[] = [];
+
+    if (amount === targetRecord.expected_amount) {
+      // Direct single-month settlement for the target record
+      recordsToSettle.push(targetRecord);
+    } else if (amount > targetRecord.expected_amount) {
+      // Multi-month settlement: Greedily allocate to oldest outstanding unpaid records first
+      const unpaidRecords = db
+        .prepare(`
+          SELECT r.*, u.full_name as member_name, u.phone as member_phone, u.is_active as member_active
+          FROM bishi_records r
+          INNER JOIN users u ON r.member_id = u.id AND r.organization_id = u.organization_id
+          WHERE r.organization_id = ? AND r.member_id = ? AND r.status != 'PAID'
+          ORDER BY r.month_year ASC, r.due_date ASC
+        `)
+        .all(orgId, targetRecord.member_id) as any[];
+
+      let remainingAmount = amount;
+      for (const rec of unpaidRecords) {
+        if (remainingAmount >= rec.expected_amount) {
+          recordsToSettle.push(rec);
+          remainingAmount -= rec.expected_amount;
+        } else {
+          break;
+        }
+      }
+
+      if (recordsToSettle.length === 0 || remainingAmount !== 0) {
+        throw new AppError(
+          `भरलेली रक्कम थकीत बीसी हप्त्यांनुसार अचूक असावी (Amount must match sum of outstanding Bishi amounts)`,
+          400
+        );
+      }
+    } else {
       throw new AppError(
-        `भरलेली रक्कम अपेक्षित बीसी रकमेइतकीच (₹${record.expected_amount}) असावी (Amount must match expected ₹${record.expected_amount})`,
+        `भरलेली रक्कम किमान अपेक्षित बीसी हप्त्याएवढी (₹${targetRecord.expected_amount}) असावी (Amount must match expected Bishi amount)`,
         400
       );
     }
@@ -158,83 +199,101 @@ export class LedgerService {
     // 4. Atomic Execution with immediate write lock
     db.exec('BEGIN IMMEDIATE TRANSACTION;');
     try {
-      // Re-check under locked transaction to guarantee race-condition safety
-      const locked = db
-        .prepare('SELECT status FROM bishi_records WHERE id = ?')
-        .get(bishiRecordId) as any;
+      let lastTxnId = '';
+      let lastTxnNumber = '';
+      const settledSummaries: Array<{ recordId: string; monthYear: string; amount: number; txnNumber: string }> = [];
 
-      if (!locked || locked.status === 'PAID') {
-        throw new AppError('हा बीसी हप्ता आधीच भरला गेला आहे (Already paid)', 409);
-      }
+      for (const rec of recordsToSettle) {
+        // Re-check under locked transaction to guarantee race-condition safety
+        const locked = db
+          .prepare('SELECT status FROM bishi_records WHERE id = ?')
+          .get(rec.id) as any;
 
-      const transactionId = crypto.randomUUID();
-      const transactionNumber = this.generateTransactionNumber();
+        if (!locked || locked.status === 'PAID') {
+          throw new AppError(`हा बीसी हप्ता (${rec.month_year}) आधीच भरला गेला आहे (Already paid)`, 409);
+        }
 
-      // Step A: Insert into financial_transactions
-      db.prepare(`
-        INSERT INTO financial_transactions (
-          id, organization_id, member_id, actor_id, transaction_type,
-          reference_id, transaction_number, amount, payment_method,
-          transaction_date, status, notes
-        ) VALUES (?, ?, ?, ?, 'BISHI_PAYMENT', ?, ?, ?, 'CASH', CURRENT_TIMESTAMP, 'CONFIRMED', ?)
-      `).run(
-        transactionId,
-        orgId,
-        record.member_id,
-        actor.id,
-        bishiRecordId,
-        transactionNumber,
-        amount,
-        notes || null
-      );
+        const transactionId = crypto.randomUUID();
+        const transactionNumber = this.generateTransactionNumber();
+        lastTxnId = transactionId;
+        lastTxnNumber = transactionNumber;
 
-      // Step B: Update bishi_records to PAID
-      db.prepare(`
-        UPDATE bishi_records
-        SET status = 'PAID',
-            paid_amount = ?,
-            paid_date = CURRENT_TIMESTAMP,
-            payment_method = 'CASH',
-            payment_transaction_id = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(amount, transactionId, bishiRecordId);
-
-      // Step C: Record Audit Log
-      db.prepare(`
-        INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
-        VALUES (?, ?, ?, 'BISHI_PAYMENT_RECORDED', ?, ?)
-      `).run(
-        crypto.randomUUID(),
-        orgId,
-        actor.id,
-        JSON.stringify({
+        // Step A: Insert into financial_transactions
+        db.prepare(`
+          INSERT INTO financial_transactions (
+            id, organization_id, member_id, actor_id, transaction_type,
+            reference_id, transaction_number, amount, payment_method,
+            transaction_date, status, notes
+          ) VALUES (?, ?, ?, ?, 'BISHI_PAYMENT', ?, ?, ?, 'CASH', CURRENT_TIMESTAMP, 'CONFIRMED', ?)
+        `).run(
           transactionId,
+          orgId,
+          rec.member_id,
+          actor.id,
+          rec.id,
           transactionNumber,
-          bishiRecordId,
-          memberId: record.member_id,
-          memberName: record.member_name,
-          amount,
-          monthYear: record.month_year,
-          actorRole: actor.role,
-        }),
-        ipAddress
-      );
+          rec.expected_amount,
+          notes || (recordsToSettle.length > 1 ? `रोख भरणा (${rec.month_year})` : null)
+        );
+
+        // Step B: Update bishi_records to PAID (Preserve separate monthly historical snapshot)
+        db.prepare(`
+          UPDATE bishi_records
+          SET status = 'PAID',
+              paid_amount = ?,
+              paid_date = CURRENT_TIMESTAMP,
+              payment_method = 'CASH',
+              payment_transaction_id = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(rec.expected_amount, transactionId, rec.id);
+
+        // Step C: Record Audit Log
+        db.prepare(`
+          INSERT INTO audit_logs (id, organization_id, user_id, action, details, ip_address)
+          VALUES (?, ?, ?, 'BISHI_PAYMENT_RECORDED', ?, ?)
+        `).run(
+          crypto.randomUUID(),
+          orgId,
+          actor.id,
+          JSON.stringify({
+            transactionId,
+            transactionNumber,
+            bishiRecordId: rec.id,
+            memberId: rec.member_id,
+            memberName: rec.member_name,
+            amount: rec.expected_amount,
+            monthYear: rec.month_year,
+            actorRole: actor.role,
+            totalAllocatedMonths: recordsToSettle.length,
+          }),
+          ipAddress
+        );
+
+        settledSummaries.push({
+          recordId: rec.id,
+          monthYear: rec.month_year,
+          amount: rec.expected_amount,
+          txnNumber: transactionNumber,
+        });
+      }
 
       db.exec('COMMIT;');
 
       // Dispatch notifications outside transaction
-      NotificationService.sendNotification({
-        organizationId: orgId,
-        userId: record.member_id,
-        type: 'BISHI_PAID',
-        title: 'बिशी जमा पावती',
-        message: `${record.month_year} महिन्याची ₹${amount} बिशी रोख जमा झाली आहे. पावती क्र: ${transactionNumber}`,
-        entityType: 'BISHI',
-        entityId: bishiRecordId,
-        idempotencyKey: `bishi-paid-cash-${transactionNumber}`,
-        data: { transactionId, transactionNumber, amount, monthYear: record.month_year },
-      }).catch(err => console.error('Notification error (bishi cash member):', err));
+      for (const item of settledSummaries) {
+        NotificationService.sendNotification({
+          organizationId: orgId,
+          userId: targetRecord.member_id,
+          type: 'BISHI_PAID',
+          title: 'बिशी जमा पावती',
+          message: `${item.monthYear} महिन्याची ₹${item.amount} बिशी रोख जमा झाली आहे. पावती क्र: ${item.txnNumber}`,
+          entityType: 'BISHI',
+          entityId: item.recordId,
+          idempotencyKey: `bishi-paid-cash-${item.txnNumber}`,
+          data: { transactionId: lastTxnId, transactionNumber: item.txnNumber, amount: item.amount, monthYear: item.monthYear },
+        }).catch((err) => console.error('Notification error (bishi cash member):', err));
+      }
 
       NotificationService.sendToRoles(
         orgId,
@@ -242,23 +301,23 @@ export class LedgerService {
         {
           type: 'BISHI_PAID',
           title: 'नवीन बिशी रोख जमा',
-          message: `${record.member_name} यांनी ${record.month_year} महिन्याची ₹${amount} बिशी रोख जमा केली.`,
+          message: `${targetRecord.member_name} यांनी ₹${amount} बीसी रक्कम रोख जमा केली (${settledSummaries.map((s) => s.monthYear).join(', ')}).`,
           entityType: 'BISHI',
-          entityId: bishiRecordId,
-          idempotencyKey: `bishi-paid-cash-admin-${transactionNumber}`,
-          data: { transactionId, transactionNumber, memberId: record.member_id, amount },
+          entityId: targetRecord.id,
+          idempotencyKey: `bishi-paid-cash-admin-${lastTxnNumber}`,
+          data: { transactionId: lastTxnId, transactionNumber: lastTxnNumber, memberId: targetRecord.member_id, amount },
         }
-      ).catch(err => console.error('Notification error (bishi cash admin):', err));
+      ).catch((err) => console.error('Notification error (bishi cash admin):', err));
 
       const savedTxn = db
         .prepare('SELECT * FROM financial_transactions WHERE id = ?')
-        .get(transactionId) as any;
+        .get(lastTxnId) as any;
 
       return {
         id: savedTxn.id,
         organizationId: savedTxn.organization_id,
         memberId: savedTxn.member_id,
-        memberName: record.member_name,
+        memberName: targetRecord.member_name,
         actorId: savedTxn.actor_id,
         transactionType: savedTxn.transaction_type,
         referenceId: savedTxn.reference_id,
@@ -268,7 +327,7 @@ export class LedgerService {
         transactionDate: savedTxn.transaction_date,
         status: savedTxn.status,
         notes: savedTxn.notes,
-        bishiMonth: record.month_year,
+        bishiMonth: targetRecord.month_year,
         createdAt: savedTxn.created_at,
       };
     } catch (err) {
@@ -426,7 +485,7 @@ export class LedgerService {
         type: 'PAYMENT_VERIFIED',
         title: 'ऑनलाइन पेमेंट यशस्वी',
         message: `${record.month_year} महिन्याची ₹${record.expected_amount} बिशी ऑनलाइन जमा झाली आहे. ट्रॅन्झॅक्शन क्र: ${transactionNumber}`,
-        entityType: 'PAYMENT_ORDER',
+        entityType: 'PAYMENT',
         entityId: orderId,
         idempotencyKey: `payment-verified-${orderId}`,
         data: { transactionId, transactionNumber, orderId, providerPaymentId, amount: record.expected_amount, monthYear: record.month_year },
@@ -439,7 +498,7 @@ export class LedgerService {
           type: 'PAYMENT_VERIFIED',
           title: 'नवीन ऑनलाइन बिशी जमा',
           message: `${record.member_name} यांचे ₹${record.expected_amount} चे ऑनलाइन पेमेंट यशस्वी झाले. (${record.month_year})`,
-          entityType: 'PAYMENT_ORDER',
+          entityType: 'PAYMENT',
           entityId: orderId,
           idempotencyKey: `payment-verified-admin-${orderId}`,
           data: { transactionId, transactionNumber, orderId, memberId: record.member_id, amount: record.expected_amount },

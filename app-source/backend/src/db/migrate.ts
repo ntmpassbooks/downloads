@@ -67,6 +67,41 @@ export function runMigrations(): void {
     console.error('Migration warning for financial_transactions:', err);
   }
 
+  // Pre-schema check: ensure payment_orders and loans have Phase 19 columns before schema.sql runs indexes
+  try {
+    const poCols = db.prepare("PRAGMA table_info(payment_orders)").all() as Array<{ name: string }>;
+    if (poCols.length > 0) {
+      const colNames = new Set(poCols.map((c) => c.name));
+      if (!colNames.has('payment_type')) {
+        db.exec("ALTER TABLE payment_orders ADD COLUMN payment_type TEXT NOT NULL DEFAULT 'BISHI';");
+      }
+      if (!colNames.has('loan_id')) {
+        db.exec('ALTER TABLE payment_orders ADD COLUMN loan_id TEXT;');
+      }
+    }
+  } catch {}
+
+  try {
+    const loanCols = db.prepare("PRAGMA table_info(loans)").all() as Array<{ name: string }>;
+    if (loanCols.length > 0) {
+      const colNames = new Set(loanCols.map((c) => c.name));
+      const requiredLoanCols: Record<string, string> = {
+        interest_type: "TEXT NOT NULL DEFAULT 'FLAT'",
+        rate_period: "TEXT NOT NULL DEFAULT 'ANNUAL'",
+        tenure_months: 'INTEGER NOT NULL DEFAULT 1',
+        monthly_installment: 'INTEGER NOT NULL DEFAULT 0',
+        total_interest: 'INTEGER NOT NULL DEFAULT 0',
+        total_payable: 'INTEGER NOT NULL DEFAULT 0',
+        first_due_date: 'TEXT',
+      };
+      for (const [col, colDef] of Object.entries(requiredLoanCols)) {
+        if (!colNames.has(col)) {
+          db.exec(`ALTER TABLE loans ADD COLUMN ${col} ${colDef};`);
+        }
+      }
+    }
+  } catch {}
+
   db.exec(sql);
 
   // Ensure payment_transaction_id column exists on bishi_records for existing tables
@@ -106,7 +141,7 @@ export function runMigrations(): void {
       .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'payment_configs'")
       .get() as { sql: string } | undefined;
 
-    if (pcfgTable && (!pcfgTable.sql.includes('bank TEXT') || pcfgTable.sql.includes('RAZORPAY'))) {
+    if (pcfgTable && pcfgTable.sql.includes('RAZORPAY') && !pcfgTable.sql.includes('qr_code_data')) {
       console.log('🔄 Migrating payment_configs to multi-bank architecture...');
       db.exec('PRAGMA foreign_keys = OFF;');
       db.exec(`
@@ -235,6 +270,379 @@ export function runMigrations(): void {
     }
   } catch (err) {
     console.error('Migration warning for device_tokens table:', err);
+  }
+
+  // Batch 16: Final Mandal Bishi Payment System Upgrade (UPI ID & QR Code + Manual Approval)
+  // 1. Ensure payment_configs supports UPI / QR architecture as well as backward-compatible fields
+  try {
+    const pcfgCols = db.prepare("PRAGMA table_info(payment_configs)").all() as Array<{ name: string }>;
+    if (pcfgCols.length > 0) {
+      const colNames = new Set(pcfgCols.map((c) => c.name));
+      const requiredCols: Record<string, string> = {
+        upi_id: 'TEXT',
+        qr_code_data: 'TEXT',
+        bank: 'TEXT',
+        provider: 'TEXT',
+        account_name: 'TEXT',
+        account_type: 'TEXT',
+        account_number: 'TEXT',
+        ifsc: 'TEXT',
+        branch: 'TEXT',
+        merchant_id: 'TEXT',
+        credentials_encrypted: 'TEXT',
+        credentials_iv: 'TEXT',
+        credentials_tag: 'TEXT',
+        status: "TEXT DEFAULT 'PENDING'",
+        notes: 'TEXT',
+      };
+      for (const [col, colDef] of Object.entries(requiredCols)) {
+        if (!colNames.has(col)) {
+          db.exec(`ALTER TABLE payment_configs ADD COLUMN ${col} ${colDef};`);
+          console.log(`✅ Added column ${col} to payment_configs table.`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Migration warning for payment_configs Batch 16:', err);
+  }
+
+  // 2. Ensure payment_orders supports manual approval & rejection fields, legacy provider fields, and ONLINE_PENDING status
+  try {
+    const orderCols = db.prepare("PRAGMA table_info(payment_orders)").all() as Array<{ name: string }>;
+    if (orderCols.length > 0) {
+      const colNames = new Set(orderCols.map((c) => c.name));
+      const requiredCols: Record<string, string> = {
+        approved_by: 'TEXT',
+        approved_at: 'DATETIME',
+        rejected_by: 'TEXT',
+        rejected_at: 'DATETIME',
+        rejection_reason: 'TEXT',
+        provider: 'TEXT',
+        bank: 'TEXT',
+        provider_order_id: 'TEXT',
+        provider_payment_id: 'TEXT',
+        expires_at: 'DATETIME',
+        completed_at: 'DATETIME',
+        notes: 'TEXT',
+      };
+      for (const [col, colDef] of Object.entries(requiredCols)) {
+        if (!colNames.has(col)) {
+          db.exec(`ALTER TABLE payment_orders ADD COLUMN ${col} ${colDef};`);
+          console.log(`✅ Added column ${col} to payment_orders table.`);
+        }
+      }
+    }
+
+    const orderTable = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'payment_orders'")
+      .get() as { sql: string } | undefined;
+
+    if (orderTable && !orderTable.sql.includes('ONLINE_PENDING')) {
+      console.log('🔄 Migrating payment_orders to manual approval architecture...');
+      db.exec('PRAGMA foreign_keys = OFF;');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS payment_orders_v3 (
+          id TEXT PRIMARY KEY,
+          organization_id TEXT NOT NULL,
+          member_id TEXT NOT NULL,
+          bishi_record_id TEXT NOT NULL,
+          amount INTEGER NOT NULL CHECK (amount > 0),
+          currency TEXT NOT NULL DEFAULT 'INR',
+          bank TEXT,
+          provider TEXT,
+          provider_order_id TEXT,
+          provider_payment_id TEXT,
+          status TEXT NOT NULL CHECK(status IN ('ONLINE_PENDING', 'ONLINE_CONFIRMED', 'ONLINE_REJECTED', 'CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED')) DEFAULT 'ONLINE_PENDING',
+          idempotency_key TEXT UNIQUE NOT NULL,
+          financial_transaction_id TEXT UNIQUE,
+          approved_by TEXT,
+          approved_at DATETIME,
+          rejected_by TEXT,
+          rejected_at DATETIME,
+          rejection_reason TEXT,
+          notes TEXT,
+          expires_at DATETIME,
+          completed_at DATETIME,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (bishi_record_id) REFERENCES bishi_records(id) ON DELETE CASCADE,
+          FOREIGN KEY (financial_transaction_id) REFERENCES financial_transactions(id) ON DELETE SET NULL,
+          FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (rejected_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+
+        INSERT INTO payment_orders_v3 (id, organization_id, member_id, bishi_record_id, amount, currency, status, idempotency_key, financial_transaction_id, created_at, updated_at)
+        SELECT id, organization_id, member_id, bishi_record_id, amount, currency, status, idempotency_key, financial_transaction_id, created_at, updated_at
+        FROM payment_orders;
+
+        DROP TABLE payment_orders;
+        ALTER TABLE payment_orders_v3 RENAME TO payment_orders;
+        CREATE INDEX IF NOT EXISTS idx_payment_orders_org ON payment_orders(organization_id);
+        CREATE INDEX IF NOT EXISTS idx_payment_orders_member ON payment_orders(member_id);
+        CREATE INDEX IF NOT EXISTS idx_payment_orders_bishi ON payment_orders(bishi_record_id);
+      `);
+      db.exec('PRAGMA foreign_keys = ON;');
+      console.log('✅ payment_orders table migrated to manual approval architecture.');
+    }
+  } catch (err) {
+    console.error('Migration warning for payment_orders Batch 16:', err);
+  }
+
+  // 3. Ensure financial_transactions supports payment_method 'ONLINE'
+  try {
+    const ftTable = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'financial_transactions'")
+      .get() as { sql: string } | undefined;
+
+    if (ftTable && !ftTable.sql.includes("'ONLINE'")) {
+      console.log('🔄 Migrating financial_transactions to support ONLINE payment_method...');
+      db.exec('PRAGMA foreign_keys = OFF;');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS financial_transactions_v3 (
+          id TEXT PRIMARY KEY,
+          organization_id TEXT NOT NULL,
+          member_id TEXT,
+          actor_id TEXT NOT NULL,
+          transaction_type TEXT NOT NULL CHECK(transaction_type IN ('BISHI_PAYMENT', 'LOAN_DISBURSED', 'LOAN_REPAYMENT', 'EXPENSE')),
+          reference_id TEXT NOT NULL,
+          transaction_number TEXT UNIQUE NOT NULL,
+          amount INTEGER NOT NULL CHECK (amount > 0),
+          payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH', 'ONLINE', 'ONLINE_UPI')) DEFAULT 'CASH',
+          transaction_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          status TEXT NOT NULL CHECK(status IN ('CONFIRMED', 'CANCELLED')) DEFAULT 'CONFIRMED',
+          notes TEXT,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT,
+          UNIQUE (organization_id, reference_id)
+        );
+
+        INSERT INTO financial_transactions_v3 SELECT * FROM financial_transactions;
+        DROP TABLE financial_transactions;
+        ALTER TABLE financial_transactions_v3 RENAME TO financial_transactions;
+        CREATE INDEX IF NOT EXISTS idx_fin_txns_org ON financial_transactions(organization_id);
+        CREATE INDEX IF NOT EXISTS idx_fin_txns_member ON financial_transactions(member_id);
+        CREATE INDEX IF NOT EXISTS idx_fin_txns_ref ON financial_transactions(reference_id);
+        CREATE INDEX IF NOT EXISTS idx_fin_txns_date ON financial_transactions(transaction_date DESC, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_fin_txns_number ON financial_transactions(transaction_number);
+      `);
+      db.exec('PRAGMA foreign_keys = ON;');
+      console.log('✅ financial_transactions table migrated to support ONLINE payment_method.');
+    }
+  } catch (err) {
+    console.error('Migration warning for financial_transactions Batch 16:', err);
+  }
+
+  // Phase 19: Comprehensive Professional Reports, EMI Loan System & Online Repayment
+  // 1. Upgrade loans table with interest terms, tenure, and EMI attributes
+  try {
+    const loanCols = db.prepare("PRAGMA table_info(loans)").all() as Array<{ name: string }>;
+    if (loanCols.length > 0) {
+      const colNames = new Set(loanCols.map((c) => c.name));
+      const requiredLoanCols: Record<string, string> = {
+        interest_type: "TEXT NOT NULL DEFAULT 'FLAT'",
+        rate_period: "TEXT NOT NULL DEFAULT 'ANNUAL'",
+        tenure_months: 'INTEGER NOT NULL DEFAULT 1',
+        monthly_installment: 'INTEGER NOT NULL DEFAULT 0',
+        total_interest: 'INTEGER NOT NULL DEFAULT 0',
+        total_payable: 'INTEGER NOT NULL DEFAULT 0',
+        first_due_date: 'TEXT',
+      };
+      for (const [col, colDef] of Object.entries(requiredLoanCols)) {
+        if (!colNames.has(col)) {
+          db.exec(`ALTER TABLE loans ADD COLUMN ${col} ${colDef};`);
+          console.log(`✅ Added column ${col} to loans table.`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Migration warning for loans Phase 19:', err);
+  }
+
+  // 2. Ensure loan_installments table exists
+  try {
+    const installmentTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='loan_installments'").get();
+    if (!installmentTable) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS loan_installments (
+          id TEXT PRIMARY KEY,
+          organization_id TEXT NOT NULL,
+          loan_id TEXT NOT NULL,
+          installment_number INTEGER NOT NULL,
+          due_date TEXT NOT NULL,
+          principal_amount INTEGER NOT NULL,
+          interest_amount INTEGER NOT NULL,
+          total_amount INTEGER NOT NULL,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          paid_date DATETIME,
+          status TEXT NOT NULL CHECK(status IN ('UPCOMING', 'DUE', 'PARTIALLY_PAID', 'PAID', 'OVERDUE')) DEFAULT 'UPCOMING',
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+          UNIQUE(loan_id, installment_number)
+        );
+        CREATE INDEX IF NOT EXISTS idx_loan_installments_org ON loan_installments(organization_id);
+        CREATE INDEX IF NOT EXISTS idx_loan_installments_loan ON loan_installments(loan_id);
+        CREATE INDEX IF NOT EXISTS idx_loan_installments_status ON loan_installments(status);
+      `);
+      console.log('✅ loan_installments table created successfully.');
+    }
+  } catch (err) {
+    console.error('Migration warning for loan_installments table:', err);
+  }
+
+  // 3. Upgrade loan_repayments table (allow ONLINE method and add principal/interest breakdown)
+  try {
+    const lrCols = db.prepare("PRAGMA table_info(loan_repayments)").all() as Array<{ name: string }>;
+    if (lrCols.length > 0) {
+      const colNames = new Set(lrCols.map((c) => c.name));
+      if (!colNames.has('principal_paid')) {
+        db.exec('ALTER TABLE loan_repayments ADD COLUMN principal_paid INTEGER NOT NULL DEFAULT 0;');
+        console.log('✅ Added principal_paid column to loan_repayments table.');
+      }
+      if (!colNames.has('interest_paid')) {
+        db.exec('ALTER TABLE loan_repayments ADD COLUMN interest_paid INTEGER NOT NULL DEFAULT 0;');
+        console.log('✅ Added interest_paid column to loan_repayments table.');
+      }
+    }
+
+    const lrTable = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'loan_repayments'")
+      .get() as { sql: string } | undefined;
+
+    if (lrTable && !lrTable.sql.includes("'ONLINE'")) {
+      console.log('🔄 Migrating loan_repayments to support ONLINE payment_method...');
+      db.exec('PRAGMA foreign_keys = OFF;');
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS loan_repayments_v2 (
+          id TEXT PRIMARY KEY,
+          organization_id TEXT NOT NULL,
+          loan_id TEXT NOT NULL,
+          member_id TEXT NOT NULL,
+          actor_id TEXT NOT NULL,
+          amount INTEGER NOT NULL CHECK (amount > 0),
+          principal_paid INTEGER NOT NULL DEFAULT 0,
+          interest_paid INTEGER NOT NULL DEFAULT 0,
+          payment_method TEXT NOT NULL CHECK(payment_method IN ('CASH', 'ONLINE')) DEFAULT 'CASH',
+          repayment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          transaction_id TEXT UNIQUE,
+          notes TEXT,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+          FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT
+        );
+
+        INSERT INTO loan_repayments_v2 (id, organization_id, loan_id, member_id, actor_id, amount, principal_paid, interest_paid, payment_method, repayment_date, transaction_id, notes, created_at)
+        SELECT id, organization_id, loan_id, member_id, actor_id, amount, COALESCE(principal_paid, amount), COALESCE(interest_paid, 0), payment_method, repayment_date, transaction_id, notes, created_at
+        FROM loan_repayments;
+
+        DROP TABLE loan_repayments;
+        ALTER TABLE loan_repayments_v2 RENAME TO loan_repayments;
+        CREATE INDEX IF NOT EXISTS idx_loan_repayments_org ON loan_repayments(organization_id);
+        CREATE INDEX IF NOT EXISTS idx_loan_repayments_loan ON loan_repayments(loan_id);
+        CREATE INDEX IF NOT EXISTS idx_loan_repayments_member ON loan_repayments(member_id);
+      `);
+      db.exec('PRAGMA foreign_keys = ON;');
+      console.log('✅ loan_repayments table migrated to support ONLINE payment_method.');
+    }
+  } catch (err) {
+    console.error('Migration warning for loan_repayments Phase 19:', err);
+  }
+
+  // 4. Upgrade payment_orders table with payment_type and loan_id and nullable bishi_record_id
+  try {
+    const poCols = db.prepare("PRAGMA table_info(payment_orders)").all() as Array<{ name: string; notnull: number }>;
+    if (poCols.length > 0) {
+      const colNames = new Set(poCols.map((c) => c.name));
+      if (!colNames.has('payment_type')) {
+        db.exec("ALTER TABLE payment_orders ADD COLUMN payment_type TEXT NOT NULL DEFAULT 'BISHI';");
+        console.log('✅ Added payment_type column to payment_orders table.');
+      }
+      if (!colNames.has('loan_id')) {
+        db.exec('ALTER TABLE payment_orders ADD COLUMN loan_id TEXT;');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_payment_orders_loan ON payment_orders(loan_id);');
+        console.log('✅ Added loan_id column to payment_orders table.');
+      }
+
+      const bishiCol = poCols.find((c) => c.name === 'bishi_record_id');
+      if (bishiCol && bishiCol.notnull === 1) {
+        console.log('🔄 Migrating payment_orders to make bishi_record_id nullable...');
+        db.exec('PRAGMA foreign_keys = OFF;');
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS payment_orders_v2 (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            member_id TEXT NOT NULL,
+            payment_type TEXT NOT NULL CHECK(payment_type IN ('BISHI', 'LOAN_REPAYMENT')) DEFAULT 'BISHI',
+            bishi_record_id TEXT,
+            loan_id TEXT,
+            amount INTEGER NOT NULL CHECK (amount > 0),
+            currency TEXT NOT NULL DEFAULT 'INR',
+            bank TEXT,
+            provider TEXT,
+            provider_order_id TEXT,
+            provider_payment_id TEXT,
+            status TEXT NOT NULL CHECK(status IN ('ONLINE_PENDING', 'ONLINE_CONFIRMED', 'ONLINE_REJECTED', 'CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED')) DEFAULT 'ONLINE_PENDING',
+            idempotency_key TEXT UNIQUE NOT NULL,
+            financial_transaction_id TEXT UNIQUE,
+            approved_by TEXT,
+            approved_at DATETIME,
+            rejected_by TEXT,
+            rejected_at DATETIME,
+            rejection_reason TEXT,
+            notes TEXT,
+            expires_at DATETIME,
+            completed_at DATETIME,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+            FOREIGN KEY (member_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (bishi_record_id) REFERENCES bishi_records(id) ON DELETE CASCADE,
+            FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+            FOREIGN KEY (financial_transaction_id) REFERENCES financial_transactions(id) ON DELETE SET NULL,
+            FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+            FOREIGN KEY (rejected_by) REFERENCES users(id) ON DELETE SET NULL
+          );
+
+          INSERT INTO payment_orders_v2 (
+            id, organization_id, member_id, payment_type, bishi_record_id, loan_id,
+            amount, currency, bank, provider, provider_order_id, provider_payment_id,
+            status, idempotency_key, financial_transaction_id, approved_by, approved_at,
+            rejected_by, rejected_at, rejection_reason, notes, expires_at, completed_at,
+            created_at, updated_at
+          )
+          SELECT 
+            id, organization_id, member_id, 
+            COALESCE(payment_type, 'BISHI'), 
+            bishi_record_id, 
+            loan_id,
+            amount, currency, bank, provider, provider_order_id, provider_payment_id,
+            status, idempotency_key, financial_transaction_id, approved_by, approved_at,
+            rejected_by, rejected_at, rejection_reason, notes, expires_at, completed_at,
+            created_at, updated_at
+          FROM payment_orders;
+
+          DROP TABLE payment_orders;
+          ALTER TABLE payment_orders_v2 RENAME TO payment_orders;
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_org ON payment_orders(organization_id);
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_member ON payment_orders(member_id);
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_bishi ON payment_orders(bishi_record_id);
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_loan ON payment_orders(loan_id);
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_status ON payment_orders(status);
+          CREATE INDEX IF NOT EXISTS idx_payment_orders_idempotency ON payment_orders(idempotency_key);
+        `);
+        db.exec('PRAGMA foreign_keys = ON;');
+        console.log('✅ payment_orders table migrated with nullable bishi_record_id.');
+      }
+    }
+  } catch (err) {
+    console.error('Migration warning for payment_orders Phase 19:', err);
   }
 
   console.log('✅ Migrations applied successfully.');

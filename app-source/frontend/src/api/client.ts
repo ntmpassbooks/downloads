@@ -62,6 +62,16 @@ function clearStoredAuth(): void {
       localStorage.removeItem('ntm_token');
       localStorage.removeItem('ntm_user');
       localStorage.removeItem('ntm_org');
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('ntm_pb_cache_')) {
+          keysToRemove.push(key);
+        }
+      }
+      for (const k of keysToRemove) {
+        localStorage.removeItem(k);
+      }
     }
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem('ntm_token');

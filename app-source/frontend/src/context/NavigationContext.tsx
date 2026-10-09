@@ -67,6 +67,32 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!Capacitor.isNativePlatform()) return;
 
     const backListenerPromise = CapApp.addListener('backButton', () => {
+      // 1. Open dialog / modal must be dismissed first
+      const openDialogs = document.querySelectorAll(
+        '[role="dialog"], [role="alertdialog"], .fixed.inset-0.z-50'
+      );
+      if (openDialogs.length > 0) {
+        const topDialog = openDialogs[openDialogs.length - 1];
+        const closeBtn =
+          topDialog.querySelector<HTMLElement>('button[aria-label="बंद करा"], button[data-modal-close]') ||
+          Array.from(topDialog.querySelectorAll<HTMLButtonElement>('button')).find(
+            (b) =>
+              b.innerText.includes('रद्द करा') ||
+              b.innerText.includes('बंद करा') ||
+              b.innerText.includes('मागे जा') ||
+              b.innerText.includes('समजले') ||
+              b.innerText.includes('ठीक आहे')
+          );
+        if (closeBtn) {
+          closeBtn.click();
+          return;
+        }
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true })
+        );
+        return;
+      }
+
       if (isMenuOpen) {
         closeMenu();
         return;
@@ -106,4 +132,8 @@ export const useNavigation = (): NavigationContextType => {
     throw new Error('useNavigation must be used within a NavigationProvider');
   }
   return context;
+};
+
+export const useOptionalNavigation = (): NavigationContextType | undefined => {
+  return useContext(NavigationContext);
 };

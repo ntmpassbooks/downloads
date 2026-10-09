@@ -23,6 +23,7 @@ export interface BishiRecord {
   expectedAmount: number;
   dueDate: string;
   status: 'PENDING' | 'PAID' | 'OVERDUE';
+  isOverdue?: boolean;
   paidAmount: number;
   paidDate: string | null;
   paymentMethod: string | null;
@@ -313,6 +314,7 @@ export class BishiService {
       throw new AppError('सदस्य सापडला नाही (Member not found in this mandal)', 404);
     }
 
+    const today = new Date().toISOString().slice(0, 10);
     const rows = db
       .prepare(`
         SELECT * FROM bishi_records
@@ -330,6 +332,7 @@ export class BishiService {
       expectedAmount: r.expected_amount,
       dueDate: r.due_date,
       status: r.status,
+      isOverdue: Boolean(r.status !== 'PAID' && r.due_date < today),
       paidAmount: r.paid_amount,
       paidDate: r.paid_date,
       paymentMethod: r.payment_method,
@@ -351,6 +354,7 @@ export class BishiService {
     const monthYear = targetMonthYear || new Date().toISOString().slice(0, 7);
 
     // Get all members with their config and record for this month
+    const today = new Date().toISOString().slice(0, 10);
     const rows = db
       .prepare(`
         SELECT 
@@ -435,6 +439,7 @@ export class BishiService {
               expectedAmount: r.record_expected_amount,
               dueDate: r.record_due_date,
               status: r.record_status,
+              isOverdue: Boolean(r.record_status !== 'PAID' && r.record_due_date < today),
               paidAmount: r.record_paid_amount,
               paidDate: r.record_paid_date,
               paymentMethod: r.record_payment_method,
