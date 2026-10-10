@@ -693,20 +693,20 @@
                   <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                   </svg>
-                  <span>अधिकृत Android APK डाउनलोड करा (7.7 MB)</span>
+                  <span>अधिकृत Android APK डाउनलोड करा (4.6 MB)</span>
                 </button>
                 <div class="mt-3 text-center text-xs text-slate-400 font-sans space-y-2">
-                  <div>आवृत्ती: <span class="text-white font-semibold">2.0.0 (Build 2)</span> • आकार: <span class="text-white font-semibold">7.7 MB</span></div>
+                  <div>आवृत्ती: <span class="text-white font-semibold">2.0.0 (Build 3)</span> • आकार: <span class="text-white font-semibold">4.6 MB</span></div>
                   <div class="w-full max-w-full space-y-1">
                     <div class="text-[11px] text-slate-400 font-medium flex items-center justify-between px-1">
                       <span>SHA-256 चेकसम:</span>
-                      <button type="button" id="btn-copy-sha" onclick="navigator.clipboard.writeText('07C937A09A893FD78012E8F052C36363B0CEA3C10A2D0F74D37D788D885B69D5').then(() => { const el = document.getElementById('btn-copy-sha'); if (el) { el.textContent = 'कॉपी झाले ✓'; el.classList.add('text-emerald-400'); setTimeout(() => { el.textContent = 'कॉपी करा'; el.classList.remove('text-emerald-400'); }, 2000); } })" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-sans cursor-pointer underline flex items-center gap-1 select-none">
+                      <button type="button" id="btn-copy-sha" onclick="navigator.clipboard.writeText('494DDBE27A58474D8D8BFB9CC5EB57DAA0712D0F715C7B645FCBA8795C6C1650').then(() => { const el = document.getElementById('btn-copy-sha'); if (el) { el.textContent = 'कॉपी झाले ✓'; el.classList.add('text-emerald-400'); setTimeout(() => { el.textContent = 'कॉपी करा'; el.classList.remove('text-emerald-400'); }, 2000); } })" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-sans cursor-pointer underline flex items-center gap-1 select-none">
                         <svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                         <span>कॉपी करा</span>
                       </button>
                     </div>
                     <div class="w-full max-w-full overflow-x-auto overflow-y-hidden rounded-lg border border-slate-800 bg-slate-900/90 py-1.5 px-3 text-center shadow-inner scrollbar-thin">
-                      <code class="text-cyan-400 font-mono text-[10px] sm:text-[11px] select-all inline-block tracking-tight sm:tracking-normal leading-normal" style="white-space: nowrap; word-break: normal; overflow-wrap: normal; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">07C937A09A893FD78012E8F052C36363B0CEA3C10A2D0F74D37D788D885B69D5</code>
+                      <code class="text-cyan-400 font-mono text-[10px] sm:text-[11px] select-all inline-block tracking-tight sm:tracking-normal leading-normal" style="white-space: nowrap; word-break: normal; overflow-wrap: normal; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">494DDBE27A58474D8D8BFB9CC5EB57DAA0712D0F715C7B645FCBA8795C6C1650</code>
                     </div>
                   </div>
                 </div>
@@ -957,7 +957,7 @@
         </div>
 
         <div class="flex items-center justify-between text-[11px] text-slate-400 font-sans">
-          <span id="sd-transferred">0.0 MB / 7.7 MB</span>
+          <span id="sd-transferred">0.0 MB / 4.6 MB</span>
           <span id="sd-speed">0.0 MB/s</span>
         </div>
       </div>
@@ -998,11 +998,11 @@
         </div>
         <div class="flex items-center justify-between">
           <span>अपेक्षित SHA-256:</span>
-          <span class="text-cyan-400 font-mono text-[10px]">07C937A0...69D5</span>
+          <span class="text-cyan-400 font-mono text-[10px]">494DDBE2...1650</span>
         </div>
         <div id="sd-computed-hash-row" class="hidden flex items-center justify-between text-emerald-400">
           <span>पडताळलेला हॅश:</span>
-          <span id="sd-computed-hash-val" class="font-mono text-[10px]">07C937A0...69D5 (Verified)</span>
+          <span id="sd-computed-hash-val" class="font-mono text-[10px]">494DDBE2...1650 (Verified)</span>
         </div>
       </div>
 
@@ -1041,8 +1041,8 @@
     const CURRENT_WEBSITE_VERSION = '2.0.0';
     const OFFICIAL_APK_FILENAME = 'NTM-Passbook-Android-v2.0.0.apk';
     const OFFICIAL_APK_URL = './' + OFFICIAL_APK_FILENAME;
-    const OFFICIAL_APK_SHA256 = '07C937A09A893FD78012E8F052C36363B0CEA3C10A2D0F74D37D788D885B69D5';
-    const OFFICIAL_APK_SIZE = 8052323; // 8,052,323 bytes (~7.7 MB)
+    const OFFICIAL_APK_SHA256 = '494DDBE27A58474D8D8BFB9CC5EB57DAA0712D0F715C7B645FCBA8795C6C1650';
+    const OFFICIAL_APK_SIZE = 4859075; // 4,859,075 bytes (~4.6 MB)
 
     // 1. Mobile Drawer Toggle
     const mobileBtn = document.getElementById('mobile-menu-btn');
@@ -1160,7 +1160,7 @@
       document.getElementById('sd-computed-hash-row')?.classList.add('hidden');
       document.getElementById('sd-progress-bar').style.width = '0%';
       document.getElementById('sd-percentage').textContent = '0%';
-      document.getElementById('sd-transferred').textContent = '0.0 MB / 7.7 MB';
+      document.getElementById('sd-transferred').textContent = '0.0 MB / 4.6 MB';
       document.getElementById('sd-speed').textContent = '0.0 MB/s';
     }
 
