@@ -1,0 +1,12 @@
+# NTM Passbook Official Public Website — Crawler Directives
+# Canonical Public Site: https://ntmpassbooks.github.io/downloads/
+# Note: On GitHub Pages project sites, root host crawlers check https://ntmpassbooks.github.io/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /downloads/
+Allow: /downloads/app/
+Disallow: /downloads/staging-release-manifest.json
+Disallow: /downloads/*.enc
+
+Sitemap: https://ntmpassbooks.github.io/downloads/sitemap.xml

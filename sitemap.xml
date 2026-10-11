@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://ntmpassbooks.github.io/downloads/</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="mr-IN" href="https://ntmpassbooks.github.io/downloads/" />
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://ntmpassbooks.github.io/downloads/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ntmpassbooks.github.io/downloads/" />
+    <image:image>
+      <image:loc>https://ntmpassbooks.github.io/downloads/assets/NTM_Passbook_Logo.png</image:loc>
+      <image:title>NTM Passbook (एनटीएम पासबुक) — Digital Passbook &amp; Bishi Management App</image:title>
+      <image:caption>Official NTM Passbook Digital Passbook and Bishi Management Application Logo</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://ntmpassbooks.github.io/downloads/app/</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

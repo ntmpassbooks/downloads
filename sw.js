@@ -61,8 +61,8 @@ self.addEventListener('fetch', (event) => {
   // Binary Package Safety: Never cache APK/ENC binaries in Service Worker cache (11+ MB)
   if (url.pathname.endsWith('.apk') || url.pathname.endsWith('.enc')) return;
 
-  // Live Update Manifest: Never cache version.json to ensure live update detection
-  if (url.pathname.endsWith('version.json')) return;
+  // Live Update Manifest & SEO Discovery Files: Never cache version.json, sitemap.xml, or robots.txt
+  if (url.pathname.endsWith('version.json') || url.pathname.endsWith('sitemap.xml') || url.pathname.endsWith('robots.txt')) return;
 
   // Navigation requests (index.html / root / downloads directory):
   // Network-First with cache fallback to ensure users receive latest HTML on deployment
