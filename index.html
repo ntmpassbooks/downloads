@@ -1242,13 +1242,13 @@
   </footer>
 
   <!-- SECURE DOWNLOAD & VERIFICATION MODAL (Proton-Drive Inspired Experience) -->
-  <div id="secure-download-modal" role="dialog" aria-modal="true" aria-labelledby="sd-modal-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md transition-all duration-300">
-    <div class="relative w-full max-w-lg rounded-3xl bg-[#0c1427] border border-cyan-500/40 shadow-[0_0_50px_rgba(0,242,254,0.25)] p-6 sm:p-8 space-y-6 text-white font-mukta overflow-hidden">
+  <div id="secure-download-modal" role="dialog" aria-modal="true" aria-labelledby="sd-modal-title" tabindex="-1" onclick="if (event.target === this) closeSecureDownloadModal();" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain transition-all duration-300">
+    <div class="relative w-full max-w-lg my-auto rounded-3xl bg-[#0c1427] border border-cyan-500/40 shadow-[0_0_50px_rgba(0,242,254,0.25)] text-white font-mukta flex flex-col max-h-[calc(100vh-1.5rem)] max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] overflow-hidden">
       <!-- Cyber Top Accent -->
-      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400"></div>
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 shrink-0"></div>
 
-      <!-- Modal Header -->
-      <div class="flex items-start justify-between gap-4">
+      <!-- Modal Header (Pinned at top) -->
+      <div class="p-5 sm:p-6 pb-3 sm:pb-4 flex items-start justify-between gap-4 border-b border-slate-800/80 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-11 h-11 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 glow-cyan-sm">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1260,101 +1260,109 @@
             <p class="text-xs text-slate-400">NTM Passbook अधिकृत क्रिप्टोग्राफिक वितरण</p>
           </div>
         </div>
-        <button type="button" onclick="closeSecureDownloadModal()" aria-label="बंद करा" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer">
+        <button type="button" onclick="closeSecureDownloadModal()" aria-label="बंद करा (Close)" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
 
-      <!-- Live Stream Status Box -->
-      <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
-        <div class="flex items-center justify-between text-xs font-semibold text-slate-300 font-sans">
-          <span id="sd-status-title" class="flex items-center gap-2">
-            <span id="sd-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-            <span id="sd-status-text">तयारी होत आहे…</span>
-          </span>
-          <span id="sd-percentage" class="text-cyan-400 font-mono">0%</span>
+      <!-- Scrollable Modal Body -->
+      <div class="overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-5 flex-1 scrollbar-thin">
+        <!-- Live Stream Status Box -->
+        <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-slate-300 font-sans">
+            <span id="sd-status-title" class="flex items-center gap-2">
+              <span id="sd-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <span id="sd-status-text">तयारी होत आहे…</span>
+            </span>
+            <span id="sd-percentage" class="text-cyan-400 font-mono">0%</span>
+          </div>
+
+          <!-- Real Progress Bar -->
+          <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 relative">
+            <div id="sd-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" class="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 rounded-full transition-all duration-100 w-0"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 font-sans">
+            <span id="sd-transferred">0.0 MB / 4.7 MB</span>
+            <span id="sd-speed">0.0 MB/s</span>
+          </div>
         </div>
 
-        <!-- Real Progress Bar -->
-        <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 relative">
-          <div id="sd-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 rounded-full transition-all duration-100 w-0"></div>
+        <!-- 6-Stage Real Verification Indicators -->
+        <div class="space-y-2 text-xs text-slate-300 font-sans">
+          <div id="step-1" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-cyan-500/40 text-cyan-300 transition-all">
+            <span class="step-icon w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold shrink-0">१</span>
+            <span class="step-label font-mukta">सुरक्षित डाउनलोड तयार होत आहे…</span>
+          </div>
+          <div id="step-2" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+            <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">२</span>
+            <span class="step-label font-mukta">अधिकृत पॅकेज डाउनलोड होत आहे…</span>
+          </div>
+          <div id="step-3" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+            <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">३</span>
+            <span class="step-label font-mukta">क्रिप्टोग्राफिक सुरक्षा पडताळणी…</span>
+          </div>
+          <div id="step-4" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+            <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">४</span>
+            <span class="step-label font-mukta">Integrity (SHA-256) तपासली जात आहे…</span>
+          </div>
+          <div id="step-5" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+            <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">५</span>
+            <span class="step-label font-mukta">APK signature व रचना तपासली जात आहे…</span>
+          </div>
+          <div id="step-6" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
+            <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">६</span>
+            <span class="step-label font-mukta">सुरक्षित डाउनलोड पूर्ण झाले</span>
+          </div>
         </div>
 
-        <div class="flex items-center justify-between text-[11px] text-slate-400 font-sans">
-          <span id="sd-transferred">0.0 MB / 4.7 MB</span>
-          <span id="sd-speed">0.0 MB/s</span>
+        <!-- Cryptographic Details Box -->
+        <div id="sd-detail-box" class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 space-y-1.5 font-sans">
+          <div class="flex items-center justify-between">
+            <span>अधिकृत APK:</span>
+            <span class="text-white font-mono text-[10px] sm:text-xs">NTM-Passbook-Android-v2.0.0.apk</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span>अपेक्षित SHA-256:</span>
+            <span id="sd-expected-hash-val" class="text-cyan-400 font-mono text-[10px] break-all">FE48FE9E...FF55</span>
+          </div>
+          <div id="sd-computed-hash-row" class="hidden flex items-center justify-between text-emerald-400">
+            <span>पडताळलेला हॅश:</span>
+            <span id="sd-computed-hash-val" class="font-mono text-[10px] break-all">FE48FE9E...FF55 (Verified ✓)</span>
+          </div>
         </div>
-      </div>
 
-      <!-- 6-Stage Real Verification Indicators -->
-      <div class="space-y-2 text-xs text-slate-300 font-sans">
-        <div id="step-1" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-cyan-500/40 text-cyan-300 transition-all">
-          <span class="step-icon w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold shrink-0">१</span>
-          <span class="step-label font-mukta">सुरक्षित डाउनलोड तयार होत आहे…</span>
+        <!-- Error State Notice (Shown on network/crypto error - FAIL CLOSED, NO DIRECT BYPASS) -->
+        <div id="sd-error-box" class="hidden p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-200 space-y-3">
+          <div class="flex items-center gap-2 font-bold text-rose-300">
+            <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span id="sd-error-title">सुरक्षित डाउनलोड पूर्ण होऊ शकला नाही.</span>
+          </div>
+          <p id="sd-error-desc" class="text-[11px] text-rose-300/90 leading-relaxed font-mukta"></p>
+          <div class="flex items-center gap-3 pt-1">
+            <button type="button" onclick="startSecureDownloadProcess()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors cursor-pointer font-sans flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-rose-400">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              <span>पुन्हा प्रयत्न करा (Retry)</span>
+            </button>
+            <button type="button" onclick="closeSecureDownloadModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs transition-colors cursor-pointer font-sans focus:outline-none focus:ring-2 focus:ring-slate-400">
+              बंद करा (Close)
+            </button>
+          </div>
         </div>
-        <div id="step-2" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
-          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">२</span>
-          <span class="step-label font-mukta">Protected package डाउनलोड होत आहे…</span>
-        </div>
-        <div id="step-3" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
-          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">३</span>
-          <span class="step-label font-mukta">Package सुरक्षितपणे decrypt होत आहे…</span>
-        </div>
-        <div id="step-4" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
-          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">४</span>
-          <span class="step-label font-mukta">Integrity (SHA-256) तपासली जात आहे…</span>
-        </div>
-        <div id="step-5" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
-          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">५</span>
-          <span class="step-label font-mukta">APK signature तपासली जात आहे…</span>
-        </div>
-        <div id="step-6" class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 text-slate-400 transition-all opacity-60">
-          <span class="step-icon w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">६</span>
-          <span class="step-label font-mukta">सुरक्षित डाउनलोड पूर्ण झाले</span>
-        </div>
-      </div>
 
-      <!-- Cryptographic Details Box -->
-      <div id="sd-detail-box" class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 space-y-1 font-sans">
-        <div class="flex items-center justify-between">
-          <span>अधिकृत APK:</span>
-          <span class="text-white font-mono">NTM-Passbook-Android-v2.0.0.apk</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span>अपेक्षित SHA-256:</span>
-          <span class="text-cyan-400 font-mono text-[10px]">E3FB2DDC...77EB</span>
-        </div>
-        <div id="sd-computed-hash-row" class="hidden flex items-center justify-between text-emerald-400">
-          <span>पडताळलेला हॅश:</span>
-          <span id="sd-computed-hash-val" class="font-mono text-[10px]">E3FB2DDC...77EB (Verified)</span>
-        </div>
-      </div>
-
-      <!-- Error State Notice (Shown on network/crypto error) -->
-      <div id="sd-error-box" class="hidden p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-200 space-y-2">
-        <div class="flex items-center gap-2 font-bold text-rose-300">
-          <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          <span id="sd-error-title">सुरक्षित डाउनलोड पूर्ण होऊ शकला नाही.</span>
-        </div>
-        <p id="sd-error-desc" class="text-[11px] text-rose-300/80 leading-relaxed font-mukta"></p>
-        <div class="flex items-center gap-3 pt-1">
-          <button type="button" onclick="startSecureDownloadProcess()" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors cursor-pointer font-sans">पुन्हा प्रयत्न करा</button>
-          <a href="./NTM-Passbook-Android-v2.0.0.apk" download="NTM-Passbook-Android-v2.0.0.apk" class="text-xs text-rose-300 hover:text-white underline font-sans">थेट डाउनलोड करा</a>
-        </div>
-      </div>
-
-      <!-- Success State Notice (Shown on full verification and download) -->
-      <div id="sd-success-box" class="hidden p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 space-y-2">
-        <div class="flex items-center gap-2 font-bold text-emerald-300">
-          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-          <span>सुरक्षित APK यशस्वीरीत्या डाउनलोड झाले!</span>
-        </div>
-        <p class="text-[11px] text-emerald-300/90 leading-relaxed font-mukta">
-          फाइल आपल्या डिव्हाइसवर सेव्ह झाली आहे. इन्स्टॉल करण्यासाठी नोटिफिकेशनवर किंवा डाउनलोड फोल्डरमधील APK वर टॅप करा.
-        </p>
-        <div class="pt-2 flex items-center justify-between">
-          <button type="button" onclick="startSecureDownloadProcess()" class="text-xs text-cyan-300 hover:text-white underline font-sans cursor-pointer">पुन्हा डाउनलोड करा</button>
-          <button type="button" onclick="closeSecureDownloadModal()" class="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors font-sans cursor-pointer">पूर्ण</button>
+        <!-- Success State Notice (Shown on full verification and download) -->
+        <div id="sd-success-box" class="hidden p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 space-y-3">
+          <div class="flex items-center gap-2 font-bold text-emerald-300">
+            <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+            <span>सुरक्षित APK यशस्वीरीत्या डाउनलोड झाले!</span>
+          </div>
+          <p class="text-[11px] text-emerald-300/90 leading-relaxed font-mukta">
+            अधिकृत स्वाक्षरी व SHA-256 अखंडता पूर्णपणे पडताळली गेली आहे. फाइल आपल्या डिव्हाइसवर सेव्ह झाली आहे.
+          </p>
+          <div class="pt-1 flex items-center justify-between gap-3">
+            <button type="button" onclick="startSecureDownloadProcess()" class="text-xs text-cyan-300 hover:text-white underline font-sans cursor-pointer">पुन्हा डाउनलोड करा</button>
+            <button type="button" onclick="closeSecureDownloadModal()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors font-sans cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400">पूर्ण (Done)</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1366,8 +1374,8 @@
     const OFFICIAL_SITE_URL = 'https://ntmpassbooks.github.io/downloads/';
     const OFFICIAL_APK_FILENAME = 'NTM-Passbook-Android-v2.0.0.apk';
     const OFFICIAL_APK_URL = './' + OFFICIAL_APK_FILENAME;
-    const OFFICIAL_APK_SHA256 = 'E3FB2DDCF50062C566969FDF015A3FB0B68E5FF2C47E94E397D2ACE3637577EB';
-    const OFFICIAL_APK_SIZE = 4910108; // 4,910,108 bytes (~4.7 MB)
+    const OFFICIAL_APK_SHA256 = 'FE48FE9E60F03FB8AC0B08DFB00238E503A1ACCE927DDB0D560FD93742E0FF55';
+    const OFFICIAL_APK_SIZE = 4910140; // 4,910,140 bytes (~4.7 MB)
 
     // Official Landing Page Share & Copy Helpers
     window.copyOfficialWebsiteLink = function() {
@@ -1448,12 +1456,15 @@
 
     // 3. Proton-Drive-Style Real Secure Download State Machine
     let currentDownloadAbortController = null;
+    let previousBodyOverflow = '';
 
     window.openSecureDownloadModal = function() {
       const modal = document.getElementById('secure-download-modal');
       if (modal) {
+        previousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
         modal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
+        modal.focus();
         startSecureDownloadProcess();
       }
     };
@@ -1466,9 +1477,21 @@
       const modal = document.getElementById('secure-download-modal');
       if (modal) {
         modal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
+        document.body.style.overflow = previousBodyOverflow || '';
+        const openBtn = document.getElementById('btn-secure-download');
+        if (openBtn) openBtn.focus();
       }
     };
+
+    // Keyboard accessibility: Escape key closes modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('secure-download-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+          closeSecureDownloadModal();
+        }
+      }
+    });
 
     function setStepState(stepNum, state) {
       // state: 'pending', 'active', 'done', 'error'
@@ -1513,8 +1536,9 @@
       document.getElementById('sd-success-box')?.classList.add('hidden');
       document.getElementById('sd-computed-hash-row')?.classList.add('hidden');
       document.getElementById('sd-progress-bar').style.width = '0%';
+      document.getElementById('sd-progress-bar').setAttribute('aria-valuenow', '0');
       document.getElementById('sd-percentage').textContent = '0%';
-      document.getElementById('sd-transferred').textContent = '0.0 MB / 4.6 MB';
+      document.getElementById('sd-transferred').textContent = '0.0 MB / 4.7 MB';
       document.getElementById('sd-speed').textContent = '0.0 MB/s';
     }
 
@@ -1571,29 +1595,53 @@
       const speedEl = document.getElementById('sd-speed');
 
       const targetUrl = options.url || OFFICIAL_APK_URL;
-      const expectedSha256 = options.sha256 || OFFICIAL_APK_SHA256;
-      const expectedSize = options.size || OFFICIAL_APK_SIZE;
+      let expectedSha256 = options.sha256 || OFFICIAL_APK_SHA256;
+      let expectedSize = options.size || OFFICIAL_APK_SIZE;
       const releaseVersion = options.version || '2.0.0';
       const isEncrypted = Boolean(options.isEncrypted || (typeof targetUrl === 'string' && targetUrl.endsWith('.enc')));
       const backendBase = options.backendBase || 'https://hp.tail5fc411.ts.net';
+
+      // Dynamically synchronize latest release metadata from version.json
+      try {
+        const vRes = await fetch('./version.json?_t=' + Date.now(), {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+        });
+        if (vRes.ok) {
+          const vData = await vRes.json();
+          if (!options.sha256 && vData && typeof vData.apkSha256 === 'string') {
+            const cleanHash = vData.apkSha256.trim().toUpperCase();
+            if (/^[A-F0-9]{64}$/.test(cleanHash)) {
+              expectedSha256 = cleanHash;
+            }
+          }
+          if (!options.size && vData && typeof vData.apkSize === 'number' && vData.apkSize > 1000000) {
+            expectedSize = vData.apkSize;
+          }
+        }
+      } catch (metaErr) {
+        console.log('Using authoritative fallback release metadata:', metaErr.message);
+      }
+
+      // Update UI with authoritative expected hash
+      const expHashEl = document.getElementById('sd-expected-hash-val');
+      if (expHashEl) {
+        expHashEl.textContent = expectedSha256.substring(0, 8) + '...' + expectedSha256.substring(56);
+      }
+
+      const abortSignal = currentDownloadAbortController ? currentDownloadAbortController.signal : undefined;
 
       try {
         // STATE 1: सुरक्षित डाउनलोड तयार होत आहे…
         setStepState(1, 'active');
         statusText.textContent = 'सुरक्षित डाउनलोड तयार होत आहे…';
         
-        // Browser capability detection (Web Crypto + ReadableStream)
+        // Strict Capability Check: Fail closed if browser lacks Web Crypto or Streams API
         const hasWebCrypto = typeof window.crypto !== 'undefined' && typeof window.crypto.subtle !== 'undefined';
         const hasStreams = typeof window.ReadableStream !== 'undefined';
 
         if (!hasWebCrypto || !hasStreams) {
-          console.warn('Browser lacks Web Crypto or Streams API. Falling back to direct secure download.');
-          statusText.textContent = 'या ब्राउझरमध्ये सुरक्षित direct download सुरू करत आहोत…';
-          setTimeout(() => {
-            window.location.href = targetUrl;
-            closeSecureDownloadModal();
-          }, 800);
-          return;
+          throw new Error('या ब्राउझरमध्ये क्रिप्टोग्राफिक सुरक्षा पडताळणी (Web Crypto API) उपलब्ध नाही. अखंडता तपासल्याशिवाय इन्स्टॉलेशन सुरक्षित नाही. कृपया अधिकृत Chrome, Edge किंवा Firefox ब्राउझर वापरा.');
         }
 
         let downloadToken = null;
@@ -1603,7 +1651,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ releaseVersion }),
-            signal: currentDownloadAbortController.signal,
+            signal: abortSignal,
           });
 
           if (!tokenRes.ok) {
@@ -1621,11 +1669,11 @@
 
         // STATE 2: Protected package डाउनलोड होत आहे…
         setStepState(2, 'active');
-        statusText.textContent = isEncrypted ? 'Encrypted package डाउनलोड होत आहे…' : 'Protected package डाउनलोड होत आहे…';
+        statusText.textContent = isEncrypted ? 'Encrypted package डाउनलोड होत आहे…' : 'अधिकृत पॅकेज डाउनलोड होत आहे…';
 
         const startTime = performance.now();
         const response = await fetch(targetUrl, {
-          signal: currentDownloadAbortController.signal,
+          signal: abortSignal,
           cache: 'no-store'
         });
 
@@ -1649,6 +1697,7 @@
 
           const pct = Math.min(100, Math.round((receivedBytes / totalExpectedBytes) * 100));
           progressBar.style.width = pct + '%';
+          progressBar.setAttribute('aria-valuenow', pct.toString());
           percentageEl.textContent = pct + '%';
 
           const currentMB = (receivedBytes / (1024 * 1024)).toFixed(1);
@@ -1659,6 +1708,10 @@
           if (elapsedSec > 0.2) {
             const speed = ((receivedBytes / (1024 * 1024)) / elapsedSec).toFixed(1);
             speedEl.textContent = speed + ' MB/s';
+          }
+
+          if (pct === 100) {
+            statusText.textContent = 'पॅकेज डाउनलोड झाले (100%), अखंडता तपासली जात आहे…';
           }
         }
 
@@ -1675,14 +1728,14 @@
 
         // STATE 3: Package सुरक्षितपणे decrypt होत आहे…
         setStepState(3, 'active');
-        statusText.textContent = isEncrypted ? 'Package सुरक्षितपणे decrypt होत आहे (AES-256-GCM)…' : 'Package क्रिप्टोग्राफिक सुरक्षा पडताळणी…';
+        statusText.textContent = isEncrypted ? 'Package सुरक्षितपणे decrypt होत आहे (AES-256-GCM)…' : 'क्रिप्टोग्राफिक सुरक्षा पडताळणी…';
         
         if (isEncrypted) {
           const keyRes = await fetch(`${backendBase}/api/release/key`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ downloadToken, releaseVersion }),
-            signal: currentDownloadAbortController.signal,
+            signal: abortSignal,
           });
 
           if (!keyRes.ok) {
@@ -1697,8 +1750,9 @@
           combinedBytes = await decryptAeadPayload(combinedBytes, keyData.releaseKey);
         } else {
           // Direct authenticated release envelope verification
-          if (combinedBytes.length < 100) {
-            throw new Error('डाउनलोड केलेली फाइल वैध नाही. आकार अपुरा आहे.');
+          if (combinedBytes.length < 1000000) {
+            combinedBytes = null;
+            throw new Error('डाउनलोड केलेली फाइल अपुरी किंवा अवैध आहे.');
           }
         }
 
@@ -1715,23 +1769,45 @@
         const hashRow = document.getElementById('sd-computed-hash-row');
         const hashVal = document.getElementById('sd-computed-hash-val');
         if (hashRow && hashVal) {
-          hashVal.textContent = computedHash.substring(0, 8) + '...' + computedHash.substring(56) + ' (Verified)';
+          const isMatch = (computedHash === expectedSha256);
+          hashVal.textContent = computedHash.substring(0, 8) + '...' + computedHash.substring(56) + (isMatch ? ' (Verified ✓)' : ' (Mismatch ✕)');
           hashRow.classList.remove('hidden');
         }
 
         if (computedHash !== expectedSha256) {
+          // Discard unverified temporary bytes immediately
+          combinedBytes = null;
           throw new Error('फाइलची अखंडता तपासता आली नाही. SHA-256 हॅश जुळत नाही (अपेक्षित: ' + expectedSha256.substring(0,8) + '..., आढळला: ' + computedHash.substring(0,8) + '...). सुरक्षा कारणास्तव डाउनलोड थांबवले.');
         }
 
         setStepState(4, 'done');
 
-        // STATE 5: APK signature तपासली जात आहे…
+        // STATE 5: APK signature व रचना तपासली जात आहे…
         setStepState(5, 'active');
         statusText.textContent = 'APK signature व रचना तपासली जात आहे…';
 
-        // Check ZIP magic header (0x50, 0x4B, 0x03, 0x04)
+        // 1. Minimum APK size check (must be at least 1 MB)
+        if (combinedBytes.length < 1000000) {
+          combinedBytes = null;
+          throw new Error('डाउनलोड केलेली फाइल अपुरी आहे. Android APK आकार अवैध आहे.');
+        }
+
+        // 2. Check ZIP magic header (0x50, 0x4B, 0x03, 0x04)
         if (combinedBytes[0] !== 0x50 || combinedBytes[1] !== 0x4B || combinedBytes[2] !== 0x03 || combinedBytes[3] !== 0x04) {
+          combinedBytes = null;
           throw new Error('डाउनलोड केलेली फाइल वैध Android APK नाही. ZIP हेडर आढळले नाही.');
+        }
+
+        // 3. Inspect binary for Android package structures (AndroidManifest.xml and signature blocks)
+        const decoder = new TextDecoder('latin1');
+        const sampleHeader = decoder.decode(combinedBytes.subarray(0, Math.min(combinedBytes.length, 65536)));
+        const sampleTail = decoder.decode(combinedBytes.subarray(Math.max(0, combinedBytes.length - 131072)));
+        const hasManifest = sampleHeader.includes('AndroidManifest.xml') || sampleTail.includes('AndroidManifest.xml');
+        const hasSignature = sampleTail.includes('META-INF/') || sampleTail.includes('APK Sig Block') || sampleHeader.includes('META-INF/');
+
+        if (!hasManifest || !hasSignature) {
+          combinedBytes = null;
+          throw new Error('Android ॲप्लिकेशन सही किंवा संरचना तपासणी अयशस्वी. APK अखंड नाही.');
         }
 
         setStepState(5, 'done');

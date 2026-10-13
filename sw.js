@@ -1,6 +1,6 @@
 // NTM Passbook Downloads Service Worker
-// Version: 2.0.0 (Build 20261013.9)
-const CACHE_NAME = 'ntm-passbook-site-v2.0.0';
+// Version: 2.0.0 (Build 20261013.9 - Secure Download & Responsive Scroll Fix)
+const CACHE_NAME = 'ntm-passbook-site-v2.0.0-b9-sec';
 const STATIC_ASSETS = [
   './',
   './index.html',
