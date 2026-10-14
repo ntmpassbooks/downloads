@@ -1,6 +1,6 @@
-// Service Worker for NTM Passbook PWA App (V2.0.0 Build 7)
+// Service Worker for NTM Passbook PWA App (V2.0.1 Build 11)
 // Cache static app shell + Vite JS/CSS bundles for offline launch. Never cache private API/auth responses.
-const CACHE_NAME = 'ntm-passbook-app-v2.0.0-b7';
+const CACHE_NAME = 'ntm-passbook-app-v2.0.1-b11';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -45,6 +45,12 @@ self.addEventListener('install', (event) => {
     );
   }
   self.skipWaiting();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {

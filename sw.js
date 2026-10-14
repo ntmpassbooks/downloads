@@ -1,6 +1,6 @@
 // NTM Passbook Downloads Service Worker
-// Version: 2.0.0 (Build 20261014.10 - Final V2.0.0 Release)
-const CACHE_NAME = 'ntm-passbook-site-v2.0.0-b10-sec';
+// Version: 2.0.1 (Build 20261014.11 - V2.0.1 Release)
+const CACHE_NAME = 'ntm-passbook-site-v2.0.1-b11-sec';
 const STATIC_ASSETS = [
   './',
   './index.html',

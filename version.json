@@ -1,8 +1,10 @@
 {
-  "version": "2.0.0",
-  "build": "20261014.10",
+  "version": "2.0.1",
+  "versionCode": 11,
+  "build": "20261014.11",
   "name": "NTM Passbook Downloads Website",
-  "apkSize": 4911223,
-  "apkSha256": "15683474448442210F5D255B0F46CFAC117E29DC381114AAF679D662E259860E",
-  "updatedAt": "2026-10-14T07:50:00Z"
+  "apkFilename": "NTM-Passbook-Android-v2.0.1.apk",
+  "apkSize": 4924476,
+  "apkSha256": "83D3D62A9DD6AA997E0287A2502B04A51377918F7334F455104010F66197333E",
+  "updatedAt": "2026-10-14T08:50:00Z"
 }
